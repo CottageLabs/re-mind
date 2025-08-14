@@ -11,3 +11,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+
+
+# docker
+docker/love-me-tender/config/
+docker/love-me-tender/data/
