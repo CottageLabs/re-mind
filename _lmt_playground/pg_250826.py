@@ -4,13 +4,13 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFacePipeline
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from love_me_tender import llm_utils
 from love_me_tender.db.qdrant.qdrant import get_client, get_vector_store
+from love_me_tender.lc_prompts import get_rag_qa_prompt
 from love_me_tender.llm_utils import get_global_device
 
 
@@ -268,13 +268,7 @@ def main5():
     # ---------------------------
     # 5) RAG prompt + chain (LCEL)
     # ---------------------------
-    prompt = ChatPromptTemplate.from_messages([
-        ("system",
-         "You are a helpful assistant. Use ONLY the provided context to answer. "
-         "If context is insufficient, say you don't know."),
-        ("human",
-         "Question: {question}\n\nContext:\n{context}")
-    ])
+    prompt = get_rag_qa_prompt()
 
     rag_chain = (
             {"context": retriever | format_docs, "question": RunnablePassthrough()}
