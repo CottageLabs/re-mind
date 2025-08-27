@@ -1,11 +1,14 @@
-def get_embedding():
-    from langchain_huggingface import HuggingFaceEmbeddings
-    from love_me_tender.constants import EMBEDDING_MODEL_NAME
-    from love_me_tender.llm_utils import get_device
+from langchain_huggingface import HuggingFaceEmbeddings
 
+from love_me_tender import llm_utils
+from love_me_tender.constants import EMBEDDING_MODEL_NAME
+from love_me_tender.llm_utils import get_global_device
+
+
+def get_embedding():
     embedding = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL_NAME,
-        model_kwargs={"device": get_device()}
+        model_kwargs={"device": get_global_device()}
     )
     return embedding
 
@@ -63,7 +66,9 @@ I can give you a **dynamic collection creator** that reads sizes for all your mo
     vec = emb.embed_query(text)  # generate once
     return len(vec)
 
+
 def main():
+    llm_utils.set_global_device('cpu')
     size = get_embedding_size(get_embedding())
     print(f"Embedding size: {size}")
 

@@ -1,12 +1,11 @@
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from qdrant_client.grpc import VectorParams
-from qdrant_client.http.models import Distance
+from qdrant_client.http.models import Distance, VectorParams
 
 from love_me_tender.cpaths import QDRANT_DATA_PATH
 from love_me_tender.rag.embedding import get_embedding
 
-DEFAULT_COLLECTION_NAME = 'love_me_tender'
+DEFAULT_COLLECTION_NAME = 'love_me_tender_default_collection'
 
 
 def get_client(location=None, **kwargs):
@@ -25,6 +24,8 @@ def get_vector_store(client=None, collection_name=DEFAULT_COLLECTION_NAME):
         client = get_client()
 
     embedding = get_embedding()
+    init_collection(embedding._client.get_sentence_embedding_dimension(),
+                    client=client, collection_name=collection_name)
     vector_store = QdrantVectorStore(
         client=client,
         collection_name=collection_name,
@@ -35,6 +36,7 @@ def get_vector_store(client=None, collection_name=DEFAULT_COLLECTION_NAME):
 
 
 def init_collection(
+        embedding_size,
         client=None,
         collection_name=DEFAULT_COLLECTION_NAME,
         **kwargs
@@ -43,12 +45,8 @@ def init_collection(
         client = get_client()
 
     # Create the collection if it doesn't exist
-    if not client.get_collection(collection_name):
+    if not client.collection_exists(collection_name):
         client.create_collection(
             collection_name=collection_name,
-            vectors_config={
-                # KTODO vectors_config need to be update and recreate collection if model changes
-                'local': VectorParams(size=100, distance=Distance.COSINE),
-            },
-            **kwargs
+            vectors_config=VectorParams(size=embedding_size, distance=Distance.COSINE),
         )
