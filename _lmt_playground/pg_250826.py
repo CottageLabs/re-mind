@@ -8,7 +8,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFacePipeline
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from love_me_tender import llm_utils
+from love_me_tender import llm_utils, components
 from love_me_tender.db.qdrant.qdrant import get_client, get_vector_store
 from love_me_tender.lc_prompts import get_rag_qa_prompt
 from love_me_tender.llm_utils import get_global_device
@@ -58,7 +58,7 @@ def main():
     #     llm_int8_has_fp16_weight=False  # Keep some weights in fp32/fp16 to preserve accuracy
     # )
 
-    llm = get_llm()
+    llm = components.get_llm()
 
     # Define prompt template for summarization
     prompt = PromptTemplate(
@@ -84,46 +84,6 @@ def main():
     time.sleep(1)
 
 
-def get_llm(device=None, openai_model=None):
-    if device is None:
-        device = get_global_device()
-    if openai_model:
-
-        from openai import OpenAI
-
-        # Tiny adapter so we can use OpenAI client as an LCEL-compatible “callable”
-        class OpenAIChatAsRunnable:
-            def __init__(self, model="gpt-4o-mini"):
-                self.client = OpenAI()
-                self.model = model
-
-            def invoke(self, messages):
-                # messages is a list of dicts: {"role": "system"/"user", "content": "..."}
-                completion = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": m.type if hasattr(m, 'type') else m["role"],
-                               "content": m.content if hasattr(m, 'content') else m["content"]}
-                              for m in messages]
-                )
-                return completion.choices[0].message.content
-
-        llm = OpenAIChatAsRunnable(model="gpt-4o-mini")
-
-    else:
-        llm = HuggingFacePipeline.from_model_id(
-            model_id="google/gemma-3-1b-it",
-            task="text-generation",
-            model_kwargs={
-                "temperature": 0.7, "max_length": 10000,
-
-                # "quantization_config": quantization_config,
-            },
-            pipeline_kwargs={"device_map": device},
-        )
-
-    return llm
-
-
 def main2():
     docs = ["Qdrant supports LangChain", "Qdrant integrates with LlamaIndex"]
     print('hihihi')
@@ -142,7 +102,7 @@ def main2():
 def main3():
     docs = ["Qdrant supports LangChain", "Qdrant integrates with LlamaIndex"]
 
-    vstore = get_vector_store(get_client(':memory:'))
+    vstore = components.get_vector_store(get_client(':memory:'))
     vstore.add_texts(docs)
 
     retrieved_docs = vstore.search('integrates')
@@ -212,7 +172,7 @@ def main5():
 
     llm_utils.set_global_device('cpu')
 
-    llm = get_llm()
+    llm = components.get_llm()
 
     # ---------------------------
     # 1) Your small document set
@@ -260,7 +220,7 @@ def main5():
     #     collection_name=collection,
     # )
 
-    vectorstore = get_vector_store()
+    vectorstore = components.get_vector_store()
     vectorstore.add_documents(docs)
 
     retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
