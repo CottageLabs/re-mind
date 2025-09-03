@@ -2,10 +2,10 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 
-from love_me_tender.cpaths import QDRANT_DATA_PATH
-from love_me_tender.rag.embedding import get_embedding
+from re_mind.cpaths import QDRANT_DATA_PATH
+from re_mind.rag.embedding import get_embedding
 
-DEFAULT_COLLECTION_NAME = 'love_me_tender_default_collection'
+DEFAULT_COLLECTION_NAME = 're_mind_default_collection'
 
 
 def get_client(location=None, **kwargs):

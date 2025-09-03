@@ -1,4 +1,4 @@
-from love_me_tender import components
+from re_mind import components
 
 # KTODO
 

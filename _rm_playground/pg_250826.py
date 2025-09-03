@@ -8,10 +8,10 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFacePipeline
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from love_me_tender import llm_utils, components
-from love_me_tender.db.qdrant.qdrant import get_client, get_vector_store
-from love_me_tender.lc_prompts import get_rag_qa_prompt
-from love_me_tender.llm_utils import get_global_device
+from re_mind import llm_utils, components
+from re_mind.db.qdrant.qdrant import get_client, get_vector_store
+from re_mind.lc_prompts import get_rag_qa_prompt
+from re_mind.llm_utils import get_global_device
 
 
 def main():

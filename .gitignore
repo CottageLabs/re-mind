@@ -15,5 +15,5 @@ wheels/
 
 
 # docker
-docker/love-me-tender/config/
-docker/love-me-tender/data/
+docker/re-mind/config/
+docker/re-mind/data/

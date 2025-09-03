@@ -1,8 +1,8 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from love_me_tender import llm_utils
-from love_me_tender.constants import EMBEDDING_MODEL_NAME
-from love_me_tender.llm_utils import get_global_device
+from re_mind import llm_utils
+from re_mind.constants import EMBEDDING_MODEL_NAME
+from re_mind.llm_utils import get_global_device
 
 
 def get_embedding():
