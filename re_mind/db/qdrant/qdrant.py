@@ -48,3 +48,28 @@ def init_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(size=embedding_size, distance=Distance.COSINE),
         )
+
+
+def init_test_data():
+    from re_mind import text_processing
+    from re_mind import components
+
+    docs_raw = [
+        ("intro.txt",
+         "LangChain lets you build RAG systems by chaining chunks, retrieval, and LLM prompts."),
+        ("qdrant.txt",
+         "Qdrant is a vector database for similarity search. It supports HNSW indexes and filtering."),
+        ("chunks.txt",
+         "Chunking with RecursiveCharacterTextSplitter helps keep semantic units together. "
+         "Common sizes: 300-800 chars with 10-100 char overlap."),
+        ("eval.txt",
+         "Evaluate RAG with precision@k, hit rate, faithfulness, and answer relevancy.")
+    ]
+
+    docs = text_processing.create_docs(docs_raw)
+    docs = list(docs)
+
+    vectorstore = components.get_vector_store()
+    vectorstore.add_documents(docs)
+
+    return vectorstore

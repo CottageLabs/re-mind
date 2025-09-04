@@ -1,16 +1,17 @@
 import time
 
 from langchain.chains import LLMChain
-from rich.console import Console
-from rich.markdown import Markdown
-from rich.rule import Rule
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.rule import Rule
 
-from re_mind import components, text_processing
-from re_mind.db.qdrant.qdrant import get_client
+from re_mind import components
+from re_mind.db.qdrant.qdrant import get_client, init_test_data
 from re_mind.lc_prompts import get_rag_qa_prompt
+from re_mind.llm import create_llm_huggingface
 from re_mind.utils import re_mind_utils as llm_utils
 
 
@@ -137,62 +138,19 @@ def format_docs(documents):
 
 
 def main5():
-    llm_utils.set_global_device('cpu')
+    device = 'cuda'
+    llm_utils.set_global_device(device)
 
-    llm = components.get_llm()
-
-    # ---------------------------
-    # 1) Your small document set
-    # ---------------------------
-    docs_raw = [
-        ("intro.txt",
-         "LangChain lets you build RAG systems by chaining chunks, retrieval, and LLM prompts."),
-        ("qdrant.txt",
-         "Qdrant is a vector database for similarity search. It supports HNSW indexes and filtering."),
-        ("chunks.txt",
-         "Chunking with RecursiveCharacterTextSplitter helps keep semantic units together. "
-         "Common sizes: 300-800 chars with 10-100 char overlap."),
-        ("eval.txt",
-         "Evaluate RAG with precision@k, hit rate, faithfulness, and answer relevancy.")
-    ]
-
-    # ---------------------------
-    # 2) Split into chunks
-    # ---------------------------
-    # text_splitter = RecursiveCharacterTextSplitter(
-    #     chunk_size=500, chunk_overlap=80, separators=["\n\n", "\n", " ", ""]
-    # )
-    # docs = []
-    # for fname, text in docs_raw:
-    #     for chunk in text_splitter.split_text(text):
-    #         docs.append(Document(page_content=chunk, metadata={"source": fname}))
-
-    docs = text_processing.create_docs(docs_raw)
-    docs = list(docs)
-
-    # ---------------------------
-    # 3) Embeddings (local)
-    # ---------------------------
-    # embeddings = get_embedding()
-
-    # ---------------------------
-    # 4) Qdrant (in-memory) store
-    # ---------------------------
-    # client = QdrantClient(location=":memory:")  # use path="qdrant_data" for on-disk
-
-    # collection = "rag_demo"
-    #
-    # # Build the vector store from documents
-    # vectorstore = QdrantVectorStore.from_documents(
-    #     documents=list(docs),
-    #     embedding=components.get_embedding(),
-    #     # client=components.get_client(),
-    #     collection_name=constants.DEFAULT_COLLECTION_NAME,
-    # )
-
+    # llm = components.get_llm()
+    # llm = create_llm_huggingface('cuda')
+    llm = create_llm_huggingface(
+        device=device,
+        model_id="google/gemma-3-1b-it",
+        # quantization_config=create_8bit_quantization_config(),
+        # temperature=0.3,
+        temperature=0.7,
+    )
     vectorstore = components.get_vector_store()
-    vectorstore.add_documents(docs)
-
     retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
 
     # ---------------------------
@@ -211,18 +169,18 @@ def main5():
     # 6) Ask a question
     # ---------------------------
     console = Console()
-    
+
     questions = [
         "What is Qdrant and what is it used for?",
         "How should I choose chunk size and overlap?",
         "How do I evaluate a RAG system?",
         "Explain LangChain's role in RAG."
     ]
-    
+
     for i, q in enumerate(questions):
         if i > 0:  # Add divider between questions
             console.print(Rule(style="dim"))
-        
+
         console.print(f"\n[bold blue]Q:[/bold blue] {q}")
         result = rag_chain.invoke(q)
         console.print("[bold green]A:[/bold green]")
@@ -289,4 +247,5 @@ def main6():
 
 if __name__ == "__main__":
     main5()
+    # init_test_data()
     # main6()
