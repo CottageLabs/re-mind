@@ -2,17 +2,29 @@ import time
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.rule import Rule
 
-from re_mind import components
-from re_mind.db.qdrant.qdrant import get_client, init_test_data
-from re_mind.lc_prompts import get_rag_qa_prompt
+from re_mind import components, pipelines
+from re_mind.db.qdrant.qdrant import get_client
 from re_mind.llm import create_llm_huggingface
 from re_mind.utils import re_mind_utils as llm_utils
+
+
+def display_qa_session(questions, rag_chain, console=None):
+    """Display a formatted Q&A session with visual dividers and rich formatting."""
+    if console is None:
+        console = Console()
+
+    for i, q in enumerate(questions):
+        if i > 0:  # Add divider between questions
+            console.print(Rule(style="dim"))
+
+        console.print(f"\n[bold blue]Q:[/bold blue] {q}")
+        result = rag_chain.invoke(q)
+        console.print("[bold green]A:[/bold green]")
+        console.print(Markdown(result))
 
 
 def main():
@@ -131,13 +143,7 @@ def main4():
     )
 
 
-def format_docs(documents):
-    return "\n\n".join(
-        f"[{d.metadata.get('source', '?')}] {d.page_content}" for d in documents
-    )
-
-
-def main5():
+def main5__test_rqg_qa():
     device = 'cuda'
     llm_utils.set_global_device(device)
 
@@ -150,25 +156,15 @@ def main5():
         # temperature=0.3,
         temperature=0.7,
     )
-    vectorstore = components.get_vector_store()
-    retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
 
     # ---------------------------
     # 5) RAG prompt + chain (LCEL)
     # ---------------------------
-    prompt = get_rag_qa_prompt()
-
-    rag_chain = (
-            {"context": retriever | format_docs, "question": RunnablePassthrough()}
-            | prompt
-            | llm
-            | StrOutputParser()
-    )
+    rag_chain = pipelines.create_basic_qa(llm)
 
     # ---------------------------
     # 6) Ask a question
     # ---------------------------
-    console = Console()
 
     questions = [
         "What is Qdrant and what is it used for?",
@@ -177,14 +173,7 @@ def main5():
         "Explain LangChain's role in RAG."
     ]
 
-    for i, q in enumerate(questions):
-        if i > 0:  # Add divider between questions
-            console.print(Rule(style="dim"))
-
-        console.print(f"\n[bold blue]Q:[/bold blue] {q}")
-        result = rag_chain.invoke(q)
-        console.print("[bold green]A:[/bold green]")
-        console.print(Markdown(result))
+    display_qa_session(questions, rag_chain=rag_chain)
 
 
 def main6():
@@ -245,7 +234,11 @@ def main6():
         print(f"Error getting vectorstore stats: {e}")
 
 
+def main7__load_pdf():
+    ...
+
+
 if __name__ == "__main__":
-    main5()
+    main5__test_rqg_qa()
     # init_test_data()
     # main6()

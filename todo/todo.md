@@ -3,6 +3,7 @@
 - [r] Add cli tool to load file to vector store
 - [ ] Support prompt template as command
 - [ ] Use LangGraph for complex workflow
+- [ ] Define metric to evaluate the performance of RAG application
 
 ## Human interface
 
