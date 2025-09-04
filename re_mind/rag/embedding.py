@@ -1,13 +1,13 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from re_mind import llm_utils
-from re_mind.constants import EMBEDDING_MODEL_NAME
-from re_mind.llm_utils import get_global_device
+from re_mind.utils import re_mind_utils
+from re_mind.constants import DEFAULT_EMBEDDING
+from re_mind.utils.re_mind_utils import get_global_device
 
 
 def get_embedding():
     embedding = HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL_NAME,
+        model_name=DEFAULT_EMBEDDING,
         model_kwargs={"device": get_global_device()}
     )
     return embedding

@@ -1,6 +1,6 @@
 from langchain_huggingface import HuggingFacePipeline
 
-from re_mind.llm_utils import get_global_device
+from re_mind.utils.re_mind_utils import get_global_device
 
 
 def get_llm(device=None, openai_model=None):

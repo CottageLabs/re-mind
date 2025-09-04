@@ -17,3 +17,8 @@ wheels/
 # docker
 docker/re-mind/config/
 docker/re-mind/data/
+
+
+
+# AI Agent
+ai-agent-tmp/

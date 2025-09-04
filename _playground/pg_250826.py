@@ -1,17 +1,17 @@
 import time
 
 from langchain.chains import LLMChain
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.rule import Rule
 from langchain.prompts import PromptTemplate
-from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from langchain_huggingface import HuggingFacePipeline
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from re_mind import llm_utils, components
-from re_mind.db.qdrant.qdrant import get_client, get_vector_store
+from re_mind import components, text_processing
+from re_mind.db.qdrant.qdrant import get_client
 from re_mind.lc_prompts import get_rag_qa_prompt
-from re_mind.llm_utils import get_global_device
+from re_mind.utils import re_mind_utils as llm_utils
 
 
 def main():
@@ -137,39 +137,6 @@ def format_docs(documents):
 
 
 def main5():
-    # rag_qdrant_minimal.py
-
-    # # --- Choose ONE LLM backend ---
-    # USE_OPENAI = True  # flip to False to use Ollama
-    #
-    # if USE_OPENAI:
-    #     from openai import OpenAI
-    #     from langchain_core.language_models.chat_models import BaseChatModel
-    #     from langchain_core.messages import HumanMessage, SystemMessage
-    #
-    #     # Tiny adapter so we can use OpenAI client as an LCEL-compatible “callable”
-    #     class OpenAIChatAsRunnable:
-    #         def __init__(self, model="gpt-4o-mini"):
-    #             self.client = OpenAI()
-    #             self.model = model
-    #
-    #         def invoke(self, messages):
-    #             # messages is a list of dicts: {"role": "system"/"user", "content": "..."}
-    #             completion = self.client.chat.completions.create(
-    #                 model=self.model,
-    #                 messages=[{"role": m.type if hasattr(m, 'type') else m["role"],
-    #                            "content": m.content if hasattr(m, 'content') else m["content"]}
-    #                           for m in messages]
-    #             )
-    #             return completion.choices[0].message.content
-    #
-    #     llm = OpenAIChatAsRunnable(model="gpt-4o-mini")
-    #
-    # else:
-    #     # Local LLM via Ollama (requires `ollama` running and a model pulled, e.g. `llama3`)
-    #     from langchain_community.chat_models import ChatOllama
-    #     llm = ChatOllama(model="llama3")  # or "llama3.1", etc.
-
     llm_utils.set_global_device('cpu')
 
     llm = components.get_llm()
@@ -192,13 +159,16 @@ def main5():
     # ---------------------------
     # 2) Split into chunks
     # ---------------------------
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500, chunk_overlap=80, separators=["\n\n", "\n", " ", ""]
-    )
-    docs = []
-    for fname, text in docs_raw:
-        for chunk in text_splitter.split_text(text):
-            docs.append(Document(page_content=chunk, metadata={"source": fname}))
+    # text_splitter = RecursiveCharacterTextSplitter(
+    #     chunk_size=500, chunk_overlap=80, separators=["\n\n", "\n", " ", ""]
+    # )
+    # docs = []
+    # for fname, text in docs_raw:
+    #     for chunk in text_splitter.split_text(text):
+    #         docs.append(Document(page_content=chunk, metadata={"source": fname}))
+
+    docs = text_processing.create_docs(docs_raw)
+    docs = list(docs)
 
     # ---------------------------
     # 3) Embeddings (local)
@@ -214,10 +184,10 @@ def main5():
     #
     # # Build the vector store from documents
     # vectorstore = QdrantVectorStore.from_documents(
-    #     documents=docs,
-    #     embedding=embeddings,
-    #     client=client,
-    #     collection_name=collection,
+    #     documents=list(docs),
+    #     embedding=components.get_embedding(),
+    #     # client=components.get_client(),
+    #     collection_name=constants.DEFAULT_COLLECTION_NAME,
     # )
 
     vectorstore = components.get_vector_store()
@@ -240,15 +210,83 @@ def main5():
     # ---------------------------
     # 6) Ask a question
     # ---------------------------
-    for q in [
+    console = Console()
+    
+    questions = [
         "What is Qdrant and what is it used for?",
         "How should I choose chunk size and overlap?",
         "How do I evaluate a RAG system?",
         "Explain LangChain's role in RAG."
-    ]:
-        print(f"\nQ: {q}")
-        print("A:", rag_chain.invoke(q))
+    ]
+    
+    for i, q in enumerate(questions):
+        if i > 0:  # Add divider between questions
+            console.print(Rule(style="dim"))
+        
+        console.print(f"\n[bold blue]Q:[/bold blue] {q}")
+        result = rag_chain.invoke(q)
+        console.print("[bold green]A:[/bold green]")
+        console.print(Markdown(result))
+
+
+def main6():
+    vectorstore = components.get_vector_store()
+
+    # Get the underlying client for more detailed inspection
+    client = vectorstore.client
+    collection_name = vectorstore.collection_name
+
+    print(f"Collection name: {collection_name}")
+
+    # Check if collection exists
+    try:
+        collection_info = client.get_collection(collection_name)
+        print(f"Collection info: {collection_info}")
+        print(f"Vector count: {collection_info.points_count}")
+        print(f"Vector config: {collection_info.config}")
+    except Exception as e:
+        print(f"Collection does not exist or error getting info: {e}")
+        return
+
+    # Try to scroll through all points to see content
+    try:
+        points = client.scroll(
+            collection_name=collection_name,
+            limit=100,  # Adjust limit as needed
+            with_payload=True,
+            with_vectors=False  # Set to True if you want to see vectors too
+        )
+
+        print(f"\nFound {len(points[0])} points:")
+        for i, point in enumerate(points[0]):
+            print(f"\nPoint {i + 1}:")
+            print(f"  ID: {point.id}")
+            print(f"  Payload: {point.payload}")
+            if hasattr(point, 'vector') and point.vector:
+                print(f"  Vector: {point.vector[:5]}..." if len(point.vector) > 5 else f"  Vector: {point.vector}")
+
+    except Exception as e:
+        print(f"Error scrolling through points: {e}")
+
+    # Try similarity search to test functionality
+    try:
+        print("\nTesting similarity search with 'test' query:")
+        results = vectorstore.similarity_search("test", k=5)
+        print(f"Found {len(results)} similar documents:")
+        for i, doc in enumerate(results):
+            print(f"  {i + 1}. Content: {doc.page_content[:100]}...")
+            print(f"     Metadata: {doc.metadata}")
+    except Exception as e:
+        print(f"Error during similarity search: {e}")
+
+    # Try to get some basic stats
+    try:
+        print(f"\nVectorstore type: {type(vectorstore)}")
+        print(f"Embedding model: {type(vectorstore.embeddings) if hasattr(vectorstore, 'embeddings') else 'Unknown'}")
+    except Exception as e:
+        print(f"Error getting vectorstore stats: {e}")
 
 
 if __name__ == "__main__":
     main5()
+    # main6()

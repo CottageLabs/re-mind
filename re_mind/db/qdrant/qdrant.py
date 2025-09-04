@@ -2,10 +2,9 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 
+from re_mind.constants import DEFAULT_COLLECTION_NAME
 from re_mind.cpaths import QDRANT_DATA_PATH
 from re_mind.rag.embedding import get_embedding
-
-DEFAULT_COLLECTION_NAME = 're_mind_default_collection'
 
 
 def get_client(location=None, **kwargs):
@@ -39,7 +38,6 @@ def init_collection(
         embedding_size,
         client=None,
         collection_name=DEFAULT_COLLECTION_NAME,
-        **kwargs
 ):
     if client is None:
         client = get_client()
