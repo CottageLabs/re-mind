@@ -5,6 +5,12 @@
 - [ ] Use LangGraph for complex workflow
 - [ ] Define metric to evaluate the performance of RAG application
 
+## Vector Store
+- [ ] avoid re-import the same file
+
+## Chat app
+- [ ] Continuous chat conversation
+
 ## Human interface
 
 - [ ] Cli interface with click + rich
