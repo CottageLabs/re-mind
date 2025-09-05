@@ -13,7 +13,7 @@ def run_chat_app():
         },
         'rag_session': {
             'temperature': 1.2,
-            'n_top_result': 8
+            'n_top_result': 6,
         },
         'huggingface_llm': {
             'device': 'cuda',
