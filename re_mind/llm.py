@@ -15,7 +15,7 @@ def create_8bit_quantization_config():
 
 
 def create_llm_huggingface(device=None, model_id="google/gemma-3-1b-it", temperature=0.7, max_length=10000,
-                           quantization_config=None
+                           quantization_config=None, return_full_text=False
                            ):
     if device is None:
         device = get_global_device()
@@ -30,7 +30,7 @@ def create_llm_huggingface(device=None, model_id="google/gemma-3-1b-it", tempera
                                             model_kwargs=model_kwargs,
                                             # pipeline_kwargs={"device_map": device},
                                             pipeline_kwargs={
-                                                "return_full_text": False,
+                                                "return_full_text": return_full_text,
                                                 "max_new_tokens": 1000,
                                                 "do_sample": True,
                                                 "device_map": device

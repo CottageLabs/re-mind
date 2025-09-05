@@ -8,8 +8,9 @@ from re_mind.utils import re_mind_utils as llm_utils
 
 
 class RagSession:
-    def __init__(self):
-        device = 'cuda'
+    def __init__(self, temperature=1.2, n_top_result=8, device=None, return_full_text=False):
+        if device is None:
+            device = llm_utils.get_global_device()
         llm_utils.set_global_device(device)
 
         # llm = components.get_llm()
@@ -21,10 +22,11 @@ class RagSession:
             # model_id="google/gemma-3-12b-it",
             # quantization_config=create_8bit_quantization_config(),
             # temperature=0.3,
-            temperature=1.2,
+            temperature=temperature,
+            return_full_text=return_full_text,
         )
 
-        self.rag_chain = pipelines.create_basic_qa(llm)
+        self.rag_chain = pipelines.create_basic_qa(llm, n_top_result=n_top_result)
 
     def chat(self, user_input, **kwargs):
         response = self.rag_chain.invoke(user_input, **kwargs)

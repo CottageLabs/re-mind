@@ -1,6 +1,5 @@
 import rich
 from prompt_toolkit import PromptSession
-from prompt_toolkit.patch_stdout import patch_stdout
 from rich.markdown import Markdown
 from rich.panel import Panel
 
@@ -8,13 +7,29 @@ from re_mind.rag.rag_session import RagSession
 
 
 def run_chat_app():
-    max_width = 100
-
-
+    config = {
+        'chat': {
+            'max_width': 100
+        },
+        'rag_session': {
+            'temperature': 1.2,
+            'n_top_result': 8
+        },
+        'huggingface_llm': {
+            'device': 'cuda',
+            'return_full_text': False,
+        }
+    }
     console = rich.console.Console()
     prompt_session = PromptSession()
     with console.status("Initializing RAG session..."):
-        rag_session = RagSession()
+        rag_config = config.get('rag_session', {})
+        rag_session = RagSession(
+            temperature=rag_config.get('temperature', 1.2),
+            n_top_result=rag_config.get('n_top_result', 8),
+            device=config.get('huggingface_llm', {}).get('device'),
+            return_full_text=config.get('huggingface_llm', {}).get('return_full_text', False)
+        )
 
     # with patch_stdout():  # ensures prints don't garble the prompt
     while True:
@@ -27,7 +42,7 @@ def run_chat_app():
         with console.status("Generating response..."):
             resp = rag_session.chat(user_input)
 
-        width = min(console.size.width, max_width)
+        width = min(console.size.width, config['chat']['max_width'])
         output = Markdown(resp)
         output = Panel(output)
         console.print(output, width=width)
