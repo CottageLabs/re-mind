@@ -1,4 +1,4 @@
-from langchain_huggingface import HuggingFacePipeline
+from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
 
 from re_mind.utils.re_mind_utils import get_global_device
 
@@ -26,13 +26,16 @@ def create_llm_huggingface(device=None, model_id="google/gemma-3-1b-it", tempera
     if quantization_config is not None:
         model_kwargs["quantization_config"] = quantization_config
 
-    return HuggingFacePipeline.from_model_id(
-        model_id=model_id,
-        task="text-generation",
-        model_kwargs=model_kwargs,
-        pipeline_kwargs={"device_map": device},
-    )
+    llm = HuggingFacePipeline.from_model_id(model_id=model_id, task="text-generation",
+                                            model_kwargs=model_kwargs,
+                                            # pipeline_kwargs={"device_map": device},
+                                            pipeline_kwargs={"return_full_text": False, "max_new_tokens": 384,
+                                                             "do_sample": False, "device_map": device},
 
+                                            )
+
+    chat = ChatHuggingFace(llm=llm)
+    return chat
 
 
 def get_llm(device=None, openai_model=None):

@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -8,7 +9,8 @@ from rich.rule import Rule
 
 from re_mind import components, pipelines
 from re_mind.db.qdrant.qdrant import get_client
-from re_mind.llm import create_llm_huggingface
+from re_mind.llm import create_llm_huggingface, create_8bit_quantization_config
+from re_mind.text_processing import load_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
 
 
@@ -151,32 +153,31 @@ def main5__test_rqg_qa():
     # llm = create_llm_huggingface('cuda')
     llm = create_llm_huggingface(
         device=device,
-        model_id="google/gemma-3-1b-it",
+        # model_id="google/gemma-3-1b-it",
+        model_id="google/gemma-3-4b-it",
+        # model_id="google/gemma-3-12b-it",
         # quantization_config=create_8bit_quantization_config(),
         # temperature=0.3,
-        temperature=0.7,
+        temperature=1.2,
     )
 
-    # ---------------------------
-    # 5) RAG prompt + chain (LCEL)
-    # ---------------------------
     rag_chain = pipelines.create_basic_qa(llm)
 
-    # ---------------------------
-    # 6) Ask a question
-    # ---------------------------
+    # questions = [
+    #     "What is Qdrant and what is it used for?",
+    #     "How should I choose chunk size and overlap?",
+    #     "How do I evaluate a RAG system?",
+    #     "Explain LangChain's role in RAG."
+    # ]
 
     questions = [
-        "What is Qdrant and what is it used for?",
-        "How should I choose chunk size and overlap?",
-        "How do I evaluate a RAG system?",
-        "Explain LangChain's role in RAG."
+        "tell me about what is machine learning, show me the refs ",
     ]
 
     display_qa_session(questions, rag_chain=rag_chain)
 
 
-def main6():
+def main6__inspect_vector_store():
     vectorstore = components.get_vector_store()
 
     # Get the underlying client for more detailed inspection
@@ -235,10 +236,31 @@ def main6():
 
 
 def main7__load_pdf():
-    ...
+    pdf_test_path = Path.home() / 'tmp/deep-learning.pdf'
+
+    if not pdf_test_path.exists():
+        print(f"PDF file not found at {pdf_test_path}")
+        return
+
+    print(f"Loading PDF from {pdf_test_path}")
+
+    docs = load_pdf_to_vectorstore(pdf_test_path)
+
+    print(f"Successfully added {len(docs)} document chunks to vector store")
+
+    # Test retrieval
+    print("\nTesting retrieval with 'learning' query:")
+    vectorstore = components.get_vector_store()
+    results = vectorstore.similarity_search("learning", k=3)
+    for i, doc in enumerate(results):
+        print(f"  {i + 1}. {doc.page_content[:100]}...")
+        print(f"     Source: {doc.metadata.get('source', 'Unknown')}")
+        print(f"     Page: {doc.metadata.get('page', 'Unknown')}")
+        print()
 
 
 if __name__ == "__main__":
+    # main7__load_pdf()
     main5__test_rqg_qa()
     # init_test_data()
-    # main6()
+    # main6__inspect_vector_store()
