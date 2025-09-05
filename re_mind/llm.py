@@ -29,8 +29,12 @@ def create_llm_huggingface(device=None, model_id="google/gemma-3-1b-it", tempera
     llm = HuggingFacePipeline.from_model_id(model_id=model_id, task="text-generation",
                                             model_kwargs=model_kwargs,
                                             # pipeline_kwargs={"device_map": device},
-                                            pipeline_kwargs={"return_full_text": False, "max_new_tokens": 384,
-                                                             "do_sample": False, "device_map": device},
+                                            pipeline_kwargs={
+                                                "return_full_text": False,
+                                                "max_new_tokens": 1000,
+                                                "do_sample": True,
+                                                "device_map": device
+                                            },
 
                                             )
 
