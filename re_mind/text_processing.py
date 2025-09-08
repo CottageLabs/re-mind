@@ -11,8 +11,12 @@ from re_mind.utils import iter_utils
 
 
 def create_text_splitter():
+    # return RecursiveCharacterTextSplitter(
+    #     chunk_size=500, chunk_overlap=80, separators=["\n\n", "\n", " ", ""]
+    # )
+
     return RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-        chunk_size=500, chunk_overlap=80, separators=["\n\n", "\n", " ", ""]
+        chunk_size=300, chunk_overlap=50, separators=["\n\n", "\n", " ", ""]
     )
 
 

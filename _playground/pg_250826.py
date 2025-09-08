@@ -260,7 +260,7 @@ def main7__load_pdf():
 
 
 if __name__ == "__main__":
-    # main7__load_pdf()
-    main5__test_rqg_qa()
+    main7__load_pdf()
+    # main5__test_rqg_qa()
     # init_test_data()
     # main6__inspect_vector_store()

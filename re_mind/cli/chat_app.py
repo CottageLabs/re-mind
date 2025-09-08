@@ -17,7 +17,7 @@ def run_chat_app():
         },
         'huggingface_llm': {
             'device': 'cuda',
-            'return_full_text': False,
+            'return_full_text': True,
         }
     }
     console = rich.console.Console()
@@ -31,6 +31,7 @@ def run_chat_app():
             return_full_text=config.get('huggingface_llm', {}).get('return_full_text', False)
         )
 
+    # Chat loop
     # with patch_stdout():  # ensures prints don't garble the prompt
     while True:
         try:

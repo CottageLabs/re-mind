@@ -11,7 +11,7 @@ def create_basic_qa(llm, n_top_result=8):
         )
 
     vectorstore = components.get_vector_store()
-    prompt = lc_prompts.get_rag_qa_prompt2()
+    prompt = lc_prompts.get_rag_qa_prompt3()
 
     # retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": n_top_result})
 
