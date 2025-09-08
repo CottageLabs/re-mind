@@ -4,7 +4,7 @@ from re_mind import components
 # KTODO
 
 
-class VectorStoreManager:
+class VectorStoreService:
     def __init__(self, vector_store=None):
         self.vector_store = vector_store or components.get_vector_store()
 
@@ -30,7 +30,7 @@ def load_data():
 
 
 def main():
-    store_manager = VectorStoreManager()
+    store_manager = VectorStoreService()
     print('Count:', store_manager.count({'metadata.source': 'intro.txt'}))
 
     points = store_manager.vector_store.client.scroll(
@@ -43,7 +43,7 @@ def main():
 
 
 def main2():
-    store_manager = VectorStoreManager()
+    store_manager = VectorStoreService()
     store_manager.delete_collection()
 
 
