@@ -26,3 +26,7 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["re_mind*"]
+
+
+[project.scripts]
+chat-app = "re_mind.cli.chat_app:main"
