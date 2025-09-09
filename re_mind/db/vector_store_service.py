@@ -5,6 +5,10 @@ from re_mind import components
 
 
 class VectorStoreService:
+    """
+    High level vector store wrapper function
+    """
+
     def __init__(self, vector_store=None):
         self.vector_store = vector_store or components.get_vector_store()
 

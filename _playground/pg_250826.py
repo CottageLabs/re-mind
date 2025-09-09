@@ -10,7 +10,7 @@ from rich.rule import Rule
 from re_mind import components, pipelines
 from re_mind.db.qdrant.qdrant import get_client
 from re_mind.llm import create_llm_huggingface, create_8bit_quantization_config
-from re_mind.text_processing import load_pdf_to_vectorstore
+from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
 
 
@@ -244,7 +244,7 @@ def main7__load_pdf():
 
     print(f"Loading PDF from {pdf_test_path}")
 
-    docs = load_pdf_to_vectorstore(pdf_test_path)
+    docs = save_pdf_to_vectorstore(pdf_test_path)
 
     print(f"Successfully added {len(docs)} document chunks to vector store")
 
