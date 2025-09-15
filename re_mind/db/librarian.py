@@ -6,6 +6,7 @@ from re_mind.constants import MAX_FILE_SIZE_BYTES
 from re_mind.db.dao.base_dao import BaseDao
 from re_mind.db.dao.library_file_dao import LibraryFileDao
 from re_mind.db.orm.orm_schema import LibraryFile
+from re_mind.db.vector_store_service import VectorStoreService
 
 
 def calculate_file_hash(file_path: Path) -> str:
@@ -59,10 +60,66 @@ class Librarian:
         with self.dao.create_session() as session:
             return list(session.query(LibraryFile).all())
 
+    def find_latest(self, limit: int = 10) -> list[LibraryFile]:
+        """Find the latest n documents ordered by creation date."""
+        with self.dao.create_session() as session:
+            return list(session.query(LibraryFile)
+                       .order_by(LibraryFile.created_at.desc())
+                       .limit(limit)
+                       .all())
 
-def main():
+    def drop_vector_store(self):
+        """Drop the entire vector store collection and clear database records."""
+        vector_service = VectorStoreService(self.vector_store)
+        vector_service.delete_collection()
+
+        # Clear all library file records from database
+        with self.dao.create_session() as session:
+            session.query(LibraryFile).delete()
+            session.commit()
+
+    def remove_by_hash(self, hash_id: str) -> bool:
+        """Remove a library file by its hash ID from both vector store and database."""
+        from qdrant_client import models
+
+        # Check if file exists in database
+        file_dao = LibraryFileDao()
+        if not file_dao.exist(hash_id):
+            return False
+
+        # Delete from vector store using metadata filter
+        client = self.vector_store.client
+        collection_name = self.vector_store.collection_name
+
+        # Create filter for hash_id
+        filter_condition = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="metadata.hash_id",
+                    match=models.MatchValue(value=hash_id)
+                )
+            ]
+        )
+
+        # Delete from vector store
+        client.delete(
+            collection_name=collection_name,
+            points_selector=models.FilterSelector(filter=filter_condition)
+        )
+
+        # Delete from database
+        with self.dao.create_session() as session:
+            session.query(LibraryFile).filter(LibraryFile.hash_id == hash_id).delete()
+            session.commit()
+
+        return True
+
+
+def main__add_test_file():
     librarian = Librarian()
     librarian.add_file(Path.home() / 'tmp/test-file/deep-learning.pdf')
+    librarian.add_file(Path.home() / 'tmp/test-file/rl1.pdf')
+    librarian.add_file(Path.home() / 'tmp/test-file/rl2.pdf')
     files = librarian.find_all()
     for f in files:
         print(f"{f.hash_id}, {f.file_name}, {f.created_at}")
@@ -71,4 +128,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main__add_test_file()
