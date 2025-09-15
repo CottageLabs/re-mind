@@ -3,13 +3,15 @@ from pathlib import Path
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage, ToolMessage
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.rule import Rule
 
 from re_mind import components, pipelines
 from re_mind.db.qdrant.qdrant import get_client
-from re_mind.llm import create_llm_huggingface, create_8bit_quantization_config
+from re_mind.llm import create_llm_huggingface, create_llama3, create_openai_model, create_vllm_model, \
+    create_8bit_quantization_config
 from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
 
@@ -27,6 +29,31 @@ def display_qa_session(questions, rag_chain, console=None):
         result = rag_chain.invoke(q)
         console.print("[bold green]A:[/bold green]")
         console.print(Markdown(result))
+
+
+def display_qa_session_with_tools(questions, rag_chain, console=None):
+    """Display a formatted Q&A session with visual dividers and rich formatting."""
+    if console is None:
+        console = Console()
+
+    for i, q in enumerate(questions):
+        if i > 0:  # Add divider between questions
+            console.print(Rule(style="dim"))
+
+        console.print(f"\n[bold blue]Q:[/bold blue] {q}")
+
+        messages = [HumanMessage(q)]
+        resp1 = rag_chain.invoke(messages)
+        messages.append(resp1)
+        for tc in resp1.tool_calls:
+            console.print(f"[dim]Invoking tool {tc.tool.name}...[/dim]")
+            resp2: ToolMessage = tc.tool.invoke(tc)
+            messages.append(resp2)
+
+        final_resp = rag_chain.invoke(messages)
+
+        console.print("[bold green]A:[/bold green]")
+        console.print(Markdown(final_resp.content))
 
 
 def main():
@@ -259,8 +286,141 @@ def main7__load_pdf():
         print()
 
 
+def main8__test_rqg_qa():
+    device = 'cuda'
+    llm_utils.set_global_device(device)
+
+    # llm = components.get_llm()
+    # llm = create_llm_huggingface('cuda')
+    llm = create_llm_huggingface(
+        device=device,
+        # model_id="google/gemma-3-1b-it",
+        model_id="google/gemma-3-4b-it",
+        # model_id="google/gemma-3-12b-it",
+        # quantization_config=create_8bit_quantization_config(),
+        # temperature=0.3,
+        temperature=1.2,
+    )
+
+    rag_chain = pipelines.create_basic_qa(llm)
+
+    # questions = [
+    #     "What is Qdrant and what is it used for?",
+    #     "How should I choose chunk size and overlap?",
+    #     "How do I evaluate a RAG system?",
+    #     "Explain LangChain's role in RAG."
+    # ]
+
+    questions = [
+        "Search and show me the score that related to machine learning",
+    ]
+
+    display_qa_session_with_tools(questions, rag_chain=rag_chain)
+
+
+def main9__try_demo_graph():
+    device = 'cuda'
+    llm_utils.set_global_device(device)
+
+    llm = create_llm_huggingface(
+        device=device,
+        model_id="google/gemma-3-1b-it",
+        # model_id="google/gemma-3-4b-it",
+        # model_id="google/gemma-3-12b-it",
+        # temperature=0.3,
+        temperature=1.2,
+    )
+    # llm = create_llama3(device=device)
+    # llm = create_vllm_model()
+    # llm = create_openai_model()
+    app = pipelines.create_demo_graph(llm)
+    # app = pipelines.create_demo_graph2(llm)
+
+    # Run
+    # out = app.invoke({"messages": [HumanMessage("Check AAPL and then advise.")]})
+    # out = app.invoke({"messages": [HumanMessage("yo")]})
+    # question = "get price of AAPL"
+    # question = "What's the temperature in Paris right now?"
+    question = "Hello, how are you?"
+    # question = "Show me some example what can lang-graph do ?"
+    out = app.invoke({"messages": [HumanMessage(question)]})
+
+
+    print('-----------------------------')
+    print('Final response:')
+    print(out["messages"][-1].content)
+
+def main10__test_tools_call_hugging_face():
+    from transformers import pipeline
+    # model_id = "huihui-ai/Llama-3.2-3B-Instruct-abliterated"
+    model_id = 'nguyenthanhthuan/Llama_3.2_1B_Intruct_Tool_Calling_V2'
+    pipe = pipeline("text-generation",
+                    model=model_id,
+                    device_map="auto")
+
+    messages = [{"role": "user", "content": "What’s the price of AAPL?"}]
+    tools = [{
+        "type": "function",
+        "function": {
+            "name": "GetPrice",
+            "description": "Get latest price for a ticker.",
+            "parameters": {"type": "object",
+                           "properties": {"ticker": {"type": "string"}},
+                           "required": ["ticker"]}
+        }
+    }]
+    out = pipe(messages, tools=tools, max_new_tokens=128)
+    print(out[0]["generated_text"][-1])  # should include a tool call if supported
+
+
+def main11__hugging_face_tools():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    # Load your chat model
+    checkpoint = "NousResearch/Hermes-2-Pro-Llama-3-8B"
+    # checkpoint = 'nguyenthanhthuan/Llama_3.2_1B_Intruct_Tool_Calling_V2'
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+    model = AutoModelForCausalLM.from_pretrained(checkpoint, device_map="auto")
+
+    # Define your tools as Python functions with Google-style docstrings
+    def get_current_temperature(location: str, unit: str):
+        """
+        Get the current temperature at a location.
+
+        Args:
+            location: The location to get the temperature for, in the format "City, Country"
+            unit: The unit to return the temperature in. (choices: ["celsius", "fahrenheit"])
+        """
+        return 22.  # Dummy example
+
+    tools = [get_current_temperature]
+
+    # Create the chat history
+    messages = [
+        {"role": "system", "content": "You are a weather bot."},
+        {"role": "user", "content": "What's the temperature in Paris, Celsius right now?"}
+    ]
+
+    # Tokenize the chat with tools
+    inputs = tokenizer.apply_chat_template(
+        messages,
+        tools=tools,
+        add_generation_prompt=True,
+        return_dict=True,
+        return_tensors="pt"
+    )
+
+    # Generate response
+    outputs = model.generate(**inputs.to(model.device), max_new_tokens=128)
+    generated = tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):])
+    print(generated)
+
+
 if __name__ == "__main__":
-    main7__load_pdf()
+    # main7__load_pdf()
     # main5__test_rqg_qa()
     # init_test_data()
     # main6__inspect_vector_store()
+    # main8__test_rqg_qa()
+    main9__try_demo_graph()
+    # main11__hugging_face_tools()

@@ -29,10 +29,6 @@ class VectorStoreService:
         self.vector_store.client.delete_collection(collection_name)
 
 
-def load_data():
-    vector_store = components.get_vector_store()
-
-
 def main():
     store_manager = VectorStoreService()
     print('Count:', store_manager.count({'metadata.source': 'intro.txt'}))
