@@ -1,4 +1,10 @@
 from langchain_core.messages import SystemMessage
+
+from typing import TypedDict, List, Optional, Tuple
+from langgraph.graph import StateGraph, START, END
+from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -6,6 +12,8 @@ from langchain_core.tools import tool
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 from re_mind import components, lc_prompts
 
@@ -68,7 +76,7 @@ def create_demo_graph(llm, n_top_result=8):
     tools = [get_price, yo_back, get_current_temperature]
     try:
         llm = llm.bind_tools(tools, tool_choice='auto')
-    except ValueError as e :
+    except ValueError as e:
         if 'you must provide exactly one tool' in str(e):
             print('Failed to bind tools')
 
@@ -208,4 +216,124 @@ def create_demo_graph2(llm, n_top_result=8):
 
     app = g.compile()
 
+    return app
+
+
+class RagState(TypedDict):
+    question: str
+    context: List[Document]
+    answer: str
+    print_result: Optional[bool]
+    print_refs: Optional[bool]
+
+
+def build_rag_app(
+        retriever: BaseRetriever,
+        llm: BaseChatModel,
+        *,
+        k: Optional[int] = None,
+        cite_metadata_keys: Tuple[str, ...] = ("source", "page"),
+        instruction: str = (
+                "Use the provided context to answer the question. "
+                "If the context is insufficient, say so. "
+                "Cite sources using [#] indices that map to the context list."
+        ),
+):
+    """
+    Build a deterministic RAG graph that: question -> retrieve -> synthesize.
+    Returns a compiled LangGraph app.
+
+    Args:
+        retriever: Any LangChain retriever (e.g., FAISS/Qdrant .as_retriever()).
+        llm: Any tool-less chat model that supports .invoke(prompt).content.
+        k: Optional override for top-k retrieval.
+        cite_metadata_keys: Metadata keys to surface in the 'Sources' footer.
+        instruction: Guidance added to the synthesis prompt.
+
+    Returns:
+        app: A compiled LangGraph app that accepts:
+             {"question": "<your question>"} and returns
+             {"question": ..., "context": List[Document], "answer": str}
+    """
+
+    # Prefer not to mutate the incoming retriever; use a k-override if supported.
+    local_retriever = (
+                              getattr(retriever, "with_search_kwargs", None) and k
+                              and retriever.with_search_kwargs({"k": k})
+                      ) or retriever
+
+    def retrieve(state: RagState):
+        query = state["question"]
+        ctx: List[Document] = local_retriever.invoke(query)
+        return {"context": ctx}
+
+    def synthesize(state: RagState):
+        docs: List[Document] = state.get("context", [])
+        if docs:
+            ctx_blocks = []
+            for i, d in enumerate(docs):
+                ctx_blocks.append(f"[{i + 1}] {d.page_content}")
+            context_text = "\n\n".join(ctx_blocks)
+        else:
+            context_text = "No relevant context was retrieved."
+
+        prompt = (
+            f"{instruction}\n\n"
+            f"Context:\n{context_text}\n\n"
+            f"Question: {state['question']}\n\n"
+            "Answer:"
+        )
+
+        ai_msg = llm.invoke(prompt)
+        answer = getattr(ai_msg, "content", ai_msg)  # be resilient to different return types
+
+        # Simple sources footer using chosen metadata keys
+        if docs:
+            lines = []
+            for idx, d in enumerate(docs, start=1):
+                meta = [str(d.metadata.get(k)) for k in cite_metadata_keys if d.metadata.get(k) is not None]
+                if meta:
+                    lines.append(f"[{idx}] " + " – ".join(meta))
+            if lines:
+                answer += "\n\nSources:\n" + "\n".join(lines)
+
+        return {"answer": answer}
+
+    def route_output(state: RagState):
+        if state.get('print_result', False):
+            return "print_result"
+        return END
+
+    def print_result(state: RagState):
+        import rich
+        console = rich.console.Console()
+
+        print_ref(state, console)
+        console.print(Markdown('# Answer'))
+        console.print(Markdown(state['answer']))
+
+    def print_ref(state: RagState, console):
+        if not state.get('print_refs', False):
+            return
+
+        import rich
+        console = console or rich.console.Console()
+
+        console.print(Markdown('# Source Documents'))
+        for i, doc in enumerate(state['context']):
+            console.print(f"    [{i + 1}] {doc.metadata}")
+            console.print(Panel(doc.page_content, title=f"Document {i + 1}", expand=False))
+
+    g = StateGraph(RagState)
+    g.add_node("retrieve", retrieve)
+    g.add_node("synthesize", synthesize)
+    g.add_node("print_result", print_result)
+
+    g.add_edge(START, "retrieve")
+    g.add_edge("retrieve", "synthesize")
+    g.add_edge("synthesize", END)
+    g.add_conditional_edges("synthesize", route_output, {"print_result": "print_result", END: END})
+    g.add_edge("print_result", END)
+
+    app = g.compile()
     return app

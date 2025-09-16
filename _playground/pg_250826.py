@@ -1,5 +1,6 @@
 import time
 from pathlib import Path
+from pprint import pprint
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -9,9 +10,9 @@ from rich.markdown import Markdown
 from rich.rule import Rule
 
 from re_mind import components, pipelines
-from re_mind.db.qdrant.qdrant import get_client
-from re_mind.llm import create_llm_huggingface, create_llama3, create_openai_model, create_vllm_model, \
-    create_8bit_quantization_config
+from re_mind.db.qdrant.qdrant import get_client, init_test_data
+from re_mind.llm import create_llm_huggingface, create_openai_model
+from re_mind.pipelines import build_rag_app
 from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
 
@@ -345,10 +346,10 @@ def main9__try_demo_graph():
     # question = "Show me some example what can lang-graph do ?"
     out = app.invoke({"messages": [HumanMessage(question)]})
 
-
     print('-----------------------------')
     print('Final response:')
     print(out["messages"][-1].content)
+
 
 def main10__test_tools_call_hugging_face():
     from transformers import pipeline
@@ -416,11 +417,60 @@ def main11__hugging_face_tools():
     print(generated)
 
 
+def main12__try_rqg_graph():
+    device = 'cuda'
+    llm_utils.set_global_device(device)
+    n_top_result = 8
+
+    llm = create_llm_huggingface(
+        device=device,
+        model_id="google/gemma-3-1b-it",
+        temperature=0.4,
+    )
+    # llm = create_openai_model()
+    vectorstore = components.get_vector_store()
+    # retriever = vectorstore.as_retriever()
+    # KTODO move retriever to components
+    retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": n_top_result, "fetch_k": n_top_result + 40, "lambda_mult": 0.5},
+    )
+
+    app = build_rag_app(
+        retriever=retriever,   # KTODO change default retriever=None
+        llm=llm,
+    )
+    question = "Tell me about machine learning"
+    resp = app.invoke({
+        "question": question,
+        "print_result": True,
+        "print_refs": True,
+    })
+    # pprint(resp)
+
+def main13__docs_reranker():
+    """
+
+    from sentence_transformers import CrossEncoder
+
+    def crossencoder_rerank(query, docs, top_m=8, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
+        ce = CrossEncoder(model_name)  # set device='cuda' if available
+        pairs = [(query, d.page_content[:1500]) for d in docs]
+        scores = ce.predict(pairs, batch_size=32)
+        order = sorted(range(len(docs)), key=lambda i: scores[i], reverse=True)[:top_m]
+        return [docs[i] for i in order]
+
+    Start with a cross-encoder (MiniLM-L6/L12) for speed → swap to BGE v2/v2.5 if you want more quality/multilingual/longer input.
+
+    """
+    # KTODO
+
 if __name__ == "__main__":
     # main7__load_pdf()
     # main5__test_rqg_qa()
     # init_test_data()
     # main6__inspect_vector_store()
     # main8__test_rqg_qa()
-    main9__try_demo_graph()
+    # main9__try_demo_graph()
     # main11__hugging_face_tools()
+    main12__try_rqg_graph()
