@@ -3,7 +3,6 @@ from langchain_core.messages import SystemMessage
 from typing import TypedDict, List, Optional, Tuple
 from langgraph.graph import StateGraph, START, END
 from langchain_core.documents import Document
-from langchain_core.retrievers import BaseRetriever
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -12,10 +11,9 @@ from langchain_core.tools import tool
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode
-from rich.markdown import Markdown
-from rich.panel import Panel
 
 from re_mind import components, lc_prompts
+from re_mind.utils.raq_utils import print_result
 
 
 def create_basic_qa(llm, n_top_result=8):
@@ -228,14 +226,15 @@ class RagState(TypedDict):
 
 
 def build_rag_app(
-        retriever: BaseRetriever,
         llm: BaseChatModel,
         *,
-        k: Optional[int] = None,
+        vectorstore=None,
+        n_top_result: int = 8,
         cite_metadata_keys: Tuple[str, ...] = ("source", "page"),
         instruction: str = (
-                "Use the provided context to answer the question. "
-                "If the context is insufficient, say so. "
+                "Use the provided context to fulfill the user's request, whether that is answering "
+                "a question, creating a summary, drafting a report, or producing other content. "
+                "If the context is insufficient for any part of the request, clearly state the gap. "
                 "Cite sources using [#] indices that map to the context list."
         ),
 ):
@@ -244,27 +243,37 @@ def build_rag_app(
     Returns a compiled LangGraph app.
 
     Args:
-        retriever: Any LangChain retriever (e.g., FAISS/Qdrant .as_retriever()).
         llm: Any tool-less chat model that supports .invoke(prompt).content.
-        k: Optional override for top-k retrieval.
+        vectorstore: Optional LangChain vectorstore used to build the retriever.
+        n_top_result: Number of top documents to retrieve via MMR.
         cite_metadata_keys: Metadata keys to surface in the 'Sources' footer.
         instruction: Guidance added to the synthesis prompt.
 
     Returns:
-        app: A compiled LangGraph app that accepts:
-             {"question": "<your question>"} and returns
-             {"question": ..., "context": List[Document], "answer": str}
+        {"question": ..., "context": List[Document], "answer": str}
     """
 
+    if vectorstore is None:
+        vectorstore = components.get_vector_store()
+
+    quick_retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": n_top_result, "fetch_k": n_top_result + 40, "lambda_mult": 0.5},
+    )
+
+    rerank_retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 60, "fetch_k": 180, "lambda_mult": 0.5},
+    )
+
+    # KTODO add plan before retrieve
+    # KTODO add re-rank after retrieve
+
     # Prefer not to mutate the incoming retriever; use a k-override if supported.
-    local_retriever = (
-                              getattr(retriever, "with_search_kwargs", None) and k
-                              and retriever.with_search_kwargs({"k": k})
-                      ) or retriever
 
     def retrieve(state: RagState):
         query = state["question"]
-        ctx: List[Document] = local_retriever.invoke(query)
+        ctx: List[Document] = quick_retriever.invoke(query)
         return {"context": ctx}
 
     def synthesize(state: RagState):
@@ -280,8 +289,8 @@ def build_rag_app(
         prompt = (
             f"{instruction}\n\n"
             f"Context:\n{context_text}\n\n"
-            f"Question: {state['question']}\n\n"
-            "Answer:"
+            f"Request: {state['question']}\n\n"
+            "Response:"
         )
 
         ai_msg = llm.invoke(prompt)
@@ -304,26 +313,6 @@ def build_rag_app(
             return "print_result"
         return END
 
-    def print_result(state: RagState):
-        import rich
-        console = rich.console.Console()
-
-        print_ref(state, console)
-        console.print(Markdown('# Answer'))
-        console.print(Markdown(state['answer']))
-
-    def print_ref(state: RagState, console):
-        if not state.get('print_refs', False):
-            return
-
-        import rich
-        console = console or rich.console.Console()
-
-        console.print(Markdown('# Source Documents'))
-        for i, doc in enumerate(state['context']):
-            console.print(f"    [{i + 1}] {doc.metadata}")
-            console.print(Panel(doc.page_content, title=f"Document {i + 1}", expand=False))
-
     g = StateGraph(RagState)
     g.add_node("retrieve", retrieve)
     g.add_node("synthesize", synthesize)
@@ -332,8 +321,8 @@ def build_rag_app(
     g.add_edge(START, "retrieve")
     g.add_edge("retrieve", "synthesize")
     g.add_edge("synthesize", END)
-    g.add_conditional_edges("synthesize", route_output, {"print_result": "print_result", END: END})
-    g.add_edge("print_result", END)
+    # g.add_conditional_edges("synthesize", route_output, {"print_result": "print_result", END: END})
+    # g.add_edge("print_result", END)
 
     app = g.compile()
     return app
