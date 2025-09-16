@@ -14,6 +14,10 @@
 - [ ] try langgraph to call different tasks
 - [ ] build general tool model with openai function calling
 
+## Pipeline
+- [ ] KTODO add plan before retrieve
+- [ ] KTODO add re-rank after retrieve
+
 ## Human interface
 
 - [ ] Cli interface with click + rich
