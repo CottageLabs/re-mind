@@ -12,6 +12,7 @@ from rich.rule import Rule
 from re_mind import components, pipelines
 from re_mind.db.qdrant.qdrant import get_client, init_test_data
 from re_mind.llm import create_llm_huggingface, create_openai_model
+from re_mind.utils.raq_utils import print_result
 from re_mind.pipelines import build_rag_app
 from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
@@ -428,25 +429,16 @@ def main12__try_rqg_graph():
         temperature=0.4,
     )
     # llm = create_openai_model()
-    vectorstore = components.get_vector_store()
-    # retriever = vectorstore.as_retriever()
-    # KTODO move retriever to components
-    retriever = vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": n_top_result, "fetch_k": n_top_result + 40, "lambda_mult": 0.5},
-    )
-
     app = build_rag_app(
-        retriever=retriever,   # KTODO change default retriever=None
         llm=llm,
+        n_top_result=n_top_result,
     )
     question = "Tell me about machine learning"
+    # question = "Write a report that about reinforcement learning"
     resp = app.invoke({
         "question": question,
-        "print_result": True,
-        "print_refs": True,
     })
-    # pprint(resp)
+    print_result(resp, show_ref=True)
 
 def main13__docs_reranker():
     """
