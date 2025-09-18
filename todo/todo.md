@@ -17,6 +17,8 @@
 ## Pipeline
 - [ ] KTODO add plan before retrieve
 - [ ] KTODO add re-rank after retrieve
+- [ ] add node to extract query from user input
+- [ ] add node to generate more query from base query
 
 ## Human interface
 
