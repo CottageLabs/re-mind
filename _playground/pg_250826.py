@@ -10,13 +10,14 @@ from rich.rule import Rule
 
 from re_mind import components, pipelines
 from re_mind.db.qdrant.qdrant import get_client
-from re_mind.language_models import create_llm_huggingface, create_openai_model
+from re_mind.language_models import create_llm_huggingface
+from re_mind.llm_tasks import extract_queries_from_input, retrieve_and_deduplicate_docs
 from re_mind.pipelines import build_rag_app
+from re_mind.rankers import rerankers
 from re_mind.text_processing import save_pdf_to_vectorstore
-from re_mind.utils import re_mind_utils as llm_utils
+from re_mind.utils import re_mind_utils as llm_utils, iter_utils
 from re_mind.utils.raq_utils import print_result
-from re_mind.lc_prompts import get_query_extraction_prompt
-from re_mind.llm_tasks import extract_queries_from_input
+
 
 
 def display_qa_session(questions, rag_chain, console=None):
@@ -438,6 +439,7 @@ def main12__try_rqg_graph():
     # question = "Write a report that about reinforcement learning"
     resp = app.invoke({
         "question": question,
+        'query_model': 'complex',
     })
     print_result(resp, show_ref=True)
     app.get_graph().print_ascii()
@@ -482,6 +484,12 @@ def main14__test_query_extraction_prompt():
         "Help me to write a report about the impact of AI on society.",
     ]
 
+    multi_query_retriever = components.get_vector_store().as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 12, "fetch_k": 60, "lambda_mult": 0.5},
+    )
+    ranker = rerankers.BGEQARanker()
+
     console = Console()
 
     for user_input in test_inputs:
@@ -490,12 +498,22 @@ def main14__test_query_extraction_prompt():
         extracted_queries = extract_queries_from_input(llm, user_input)
 
         console.print("[bold green]Extracted Queries:[/bold green]")
-        if extracted_queries:
-            for query in extracted_queries:
-                console.print(f"- {query}")
-        else:
+        if not extracted_queries:
             console.print("No queries extracted")
+            return
+
+        docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
+        print(f'uniqued {len(docs)} docs')
         console.print(Rule(style="dim"))
+
+        scores = rerankers.cal_score_matrix(extracted_queries, docs, ranker=ranker)
+        top_docs = rerankers.aggregate_scores(scores, docs, )
+        print(f'aggregated to {len(top_docs)} docs')
+        for d, s in top_docs[:8]:
+            console.print(f"[bold]{s:.4f}[/bold] {d.page_content[:200]}...")
+            console.print(f"     Source: {d.metadata.get('source', 'Unknown')}")
+            console.print(f"     Page: {d.metadata.get('page', 'Unknown')}")
+            console.print()
 
 
 if __name__ == "__main__":
@@ -506,5 +524,5 @@ if __name__ == "__main__":
     # main8__test_rqg_qa()
     # main9__try_demo_graph()
     # main11__hugging_face_tools()
-    # main12__try_rqg_graph()
-    main14__test_query_extraction_prompt()
+    main12__try_rqg_graph()
+    # main14__test_query_extraction_prompt()
