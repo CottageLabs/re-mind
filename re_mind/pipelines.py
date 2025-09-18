@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Tuple
+from typing import TypedDict, List, Tuple, Literal
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -11,8 +11,10 @@ from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode
 
-from re_mind import components, lc_prompts
+from re_mind import components, lc_prompts, llm_tasks
 from re_mind.lc_prompts import DEFAULT_RAG_INSTRUCTION
+from re_mind.llm_tasks import retrieve_and_deduplicate_docs
+from re_mind.rankers import rerankers
 from re_mind.rankers.rerankers import rerank_with_qa_ranker, BGEQARanker
 
 
@@ -221,7 +223,7 @@ class RagState(TypedDict):
     question: str
     context: List[Document]
     answer: str
-    use_reranker: bool
+    query_model: Literal['quick', 'rerank', 'complex']
 
 
 def build_rag_app(
@@ -260,37 +262,46 @@ def build_rag_app(
         search_kwargs={"k": 60, "fetch_k": 180, "lambda_mult": 0.5},
     )
 
+    multi_query_retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 12, "fetch_k": 60, "lambda_mult": 0.5},
+    )
+
     # KTODO add plan before retrieve
     # KTODO add re-rank after retrieve
 
     # Prefer not to mutate the incoming retriever; use a k-override if supported.
     def route_retriever(state: RagState):
-        """
-        Conditional routing function:
-        - use_reranker=True: route to rerank_retrieve -> rerank -> synthesize
-        - use_reranker=False: route to quick_retrieve -> synthesize
-        """
-        if state.get("use_reranker", True):
+        query_model = state.get("query_model", 'complex')
+        if query_model == 'quick':
+            return "quick_retrieve"
+        elif query_model == 'rerank':
             return "rerank_retrieve"
         else:
-            return "quick_retrieve"
+            return "complex_retrieve"
 
     def quick_retrieve(state: RagState):
-        query = state["question"]
-        ctx: List[Document] = quick_retriever.invoke(query)
+        ctx: List[Document] = quick_retriever.invoke(state["question"])
         return {"context": ctx}
 
     def rerank_retrieve(state: RagState):
         query = state["question"]
-        ctx: List[Document] = rerank_retriever.invoke(query)
-        return {"context": ctx}
-
-    def rerank(state: RagState):
-        query = state["question"]
-        docs = state["context"]
+        docs: List[Document] = rerank_retriever.invoke(query)
         ranker = BGEQARanker()
         reranked_docs = rerank_with_qa_ranker(query, docs, ranker, top_m=n_top_result)
         return {"context": reranked_docs}
+
+    def complex_retrieve(state: RagState):
+        extracted_queries = llm_tasks.extract_queries_from_input(llm, state["question"])
+        ranker = BGEQARanker()
+
+        docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
+        scores = rerankers.cal_score_matrix(extracted_queries, docs, ranker=ranker)
+        top_docs = rerankers.aggregate_scores(scores, docs, k_final=n_top_result)
+        for d, s in top_docs:
+            d.metadata["ranker_score"] = s
+        result_docs = [d for d, _ in top_docs]
+        return {"context": result_docs}
 
     def synthesize(state: RagState):
         docs: List[Document] = state.get("context", [])
@@ -321,22 +332,20 @@ def build_rag_app(
 
     g = StateGraph(RagState)
     g.add_node("quick_retrieve", quick_retrieve)
-    g.add_node("rerank_retrieve", rerank_retrieve)  # Retrieves more docs for reranking
-    g.add_node("rerank", rerank)  # Reranks and filters to top_m documents
+    g.add_node("rerank_retrieve", rerank_retrieve)
+    g.add_node("complex_retrieve", complex_retrieve)
     g.add_node("synthesize", synthesize)
 
     # Conditional routing from START based on use_reranker flag
     g.add_conditional_edges(START, route_retriever, {
         "quick_retrieve": "quick_retrieve",
-        "rerank_retrieve": "rerank_retrieve"
+        "rerank_retrieve": "rerank_retrieve",
+        "complex_retrieve": "complex_retrieve",
     })
 
-    # Quick retrieve path: quick_retrieve -> synthesize
     g.add_edge("quick_retrieve", "synthesize")
-
-    # Rerank path: rerank_retrieve -> rerank -> synthesize
-    g.add_edge("rerank_retrieve", "rerank")
-    g.add_edge("rerank", "synthesize")
+    g.add_edge("rerank_retrieve", "synthesize")
+    g.add_edge("complex_retrieve", "synthesize")
 
     g.add_edge("synthesize", END)
     # g.add_conditional_edges("synthesize", route_output, {"print_result": "print_result", END: END})
