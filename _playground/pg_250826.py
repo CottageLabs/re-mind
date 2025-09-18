@@ -1,6 +1,5 @@
 import time
 from pathlib import Path
-from pprint import pprint
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -10,12 +9,13 @@ from rich.markdown import Markdown
 from rich.rule import Rule
 
 from re_mind import components, pipelines
-from re_mind.db.qdrant.qdrant import get_client, init_test_data
+from re_mind.db.qdrant.qdrant import get_client
 from re_mind.llm import create_llm_huggingface, create_openai_model
-from re_mind.utils.raq_utils import print_result
 from re_mind.pipelines import build_rag_app
 from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
+from re_mind.utils.raq_utils import print_result
+from re_mind.lc_prompts import get_query_extraction_prompt
 
 
 def display_qa_session(questions, rag_chain, console=None):
@@ -439,6 +439,8 @@ def main12__try_rqg_graph():
         "question": question,
     })
     print_result(resp, show_ref=True)
+    app.get_graph().print_ascii()
+
 
 def main13__docs_reranker():
     """
@@ -457,6 +459,57 @@ def main13__docs_reranker():
     """
     # KTODO
 
+
+def extract_queries_from_input(llm, user_input):
+    """Extract queries from user input using the query extraction prompt."""
+    prompt = get_query_extraction_prompt(user_input)
+    result = llm.invoke(prompt)
+
+    if "<NO_QUERY>" in result.content:
+        return []
+
+    # Split content into lines and filter out empty lines
+    queries = [line.strip() for line in result.content.split('\n') if line.strip()]
+    return queries
+
+
+def main14__test_query_extraction_prompt():
+    """Test the query extraction prompt with a local model."""
+    device = 'cuda'
+    llm_utils.set_global_device(device)
+
+    llm = create_llm_huggingface(
+        device=device,
+        model_id="google/gemma-3-1b-it",
+        temperature=0.2,
+    )
+    # llm = create_openai_model()
+
+    test_inputs = [
+        # "I want to learn about machine learning algorithms",
+        # "What are the latest developments in transformer models?",
+        # "How do I implement a neural network in Python?",
+        # "Hello, how are you?",
+        # "Can you help me with my homework on reinforcement learning?",
+        "Help me to write a report about the impact of AI on society.",
+    ]
+
+    console = Console()
+
+    for user_input in test_inputs:
+        console.print(f"\n[bold blue]Input:[/bold blue] {user_input}")
+
+        extracted_queries = extract_queries_from_input(llm, user_input)
+
+        console.print("[bold green]Extracted Queries:[/bold green]")
+        if extracted_queries:
+            for query in extracted_queries:
+                console.print(f"- {query}")
+        else:
+            console.print("No queries extracted")
+        console.print(Rule(style="dim"))
+
+
 if __name__ == "__main__":
     # main7__load_pdf()
     # main5__test_rqg_qa()
@@ -465,4 +518,5 @@ if __name__ == "__main__":
     # main8__test_rqg_qa()
     # main9__try_demo_graph()
     # main11__hugging_face_tools()
-    main12__try_rqg_graph()
+    # main12__try_rqg_graph()
+    main14__test_query_extraction_prompt()
