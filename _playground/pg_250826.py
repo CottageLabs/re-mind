@@ -16,6 +16,7 @@ from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
 from re_mind.utils.raq_utils import print_result
 from re_mind.lc_prompts import get_query_extraction_prompt
+from re_mind.llm_tasks import extract_queries_from_input
 
 
 def display_qa_session(questions, rag_chain, console=None):
@@ -458,19 +459,6 @@ def main13__docs_reranker():
 
     """
     # KTODO
-
-
-def extract_queries_from_input(llm, user_input):
-    """Extract queries from user input using the query extraction prompt."""
-    prompt = get_query_extraction_prompt(user_input)
-    result = llm.invoke(prompt)
-
-    if "<NO_QUERY>" in result.content:
-        return []
-
-    # Split content into lines and filter out empty lines
-    queries = [line.strip() for line in result.content.split('\n') if line.strip()]
-    return queries
 
 
 def main14__test_query_extraction_prompt():
