@@ -1,9 +1,8 @@
-from langchain_core.messages import SystemMessage
+from typing import TypedDict, List, Tuple
 
-from typing import TypedDict, List, Optional, Tuple
-from langgraph.graph import StateGraph, START, END
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -13,7 +12,8 @@ from langgraph.graph import StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode
 
 from re_mind import components, lc_prompts
-from re_mind.utils.raq_utils import print_result
+from re_mind.lc_prompts import DEFAULT_RAG_INSTRUCTION
+from re_mind.rankers.rerankers import rerank_with_qa_ranker, BGEQARanker
 
 
 def create_basic_qa(llm, n_top_result=8):
@@ -221,8 +221,7 @@ class RagState(TypedDict):
     question: str
     context: List[Document]
     answer: str
-    print_result: Optional[bool]
-    print_refs: Optional[bool]
+    use_reranker: bool
 
 
 def build_rag_app(
@@ -231,15 +230,10 @@ def build_rag_app(
         vectorstore=None,
         n_top_result: int = 8,
         cite_metadata_keys: Tuple[str, ...] = ("source", "page"),
-        instruction: str = (
-                "Use the provided context to fulfill the user's request, whether that is answering "
-                "a question, creating a summary, drafting a report, or producing other content. "
-                "If the context is insufficient for any part of the request, clearly state the gap. "
-                "Cite sources using [#] indices that map to the context list."
-        ),
+        instruction: str = DEFAULT_RAG_INSTRUCTION,
 ):
     """
-    Build a deterministic RAG graph that: question -> retrieve -> synthesize.
+    Build a deterministic RAG graph that: question -> quick_retrieve -> synthesize.
     Returns a compiled LangGraph app.
 
     Args:
@@ -270,11 +264,33 @@ def build_rag_app(
     # KTODO add re-rank after retrieve
 
     # Prefer not to mutate the incoming retriever; use a k-override if supported.
+    def route_retriever(state: RagState):
+        """
+        Conditional routing function:
+        - use_reranker=True: route to rerank_retrieve -> rerank -> synthesize
+        - use_reranker=False: route to quick_retrieve -> synthesize
+        """
+        if state.get("use_reranker", True):
+            return "rerank_retrieve"
+        else:
+            return "quick_retrieve"
 
-    def retrieve(state: RagState):
+    def quick_retrieve(state: RagState):
         query = state["question"]
         ctx: List[Document] = quick_retriever.invoke(query)
         return {"context": ctx}
+
+    def rerank_retrieve(state: RagState):
+        query = state["question"]
+        ctx: List[Document] = rerank_retriever.invoke(query)
+        return {"context": ctx}
+
+    def rerank(state: RagState):
+        query = state["question"]
+        docs = state["context"]
+        ranker = BGEQARanker()
+        reranked_docs = rerank_with_qa_ranker(query, docs, ranker, top_m=n_top_result)
+        return {"context": reranked_docs}
 
     def synthesize(state: RagState):
         docs: List[Document] = state.get("context", [])
@@ -286,12 +302,7 @@ def build_rag_app(
         else:
             context_text = "No relevant context was retrieved."
 
-        prompt = (
-            f"{instruction}\n\n"
-            f"Context:\n{context_text}\n\n"
-            f"Request: {state['question']}\n\n"
-            "Response:"
-        )
+        prompt = lc_prompts.format_rag_prompt(instruction, context_text, state['question'])
 
         ai_msg = llm.invoke(prompt)
         answer = getattr(ai_msg, "content", ai_msg)  # be resilient to different return types
@@ -308,18 +319,25 @@ def build_rag_app(
 
         return {"answer": answer}
 
-    def route_output(state: RagState):
-        if state.get('print_result', False):
-            return "print_result"
-        return END
-
     g = StateGraph(RagState)
-    g.add_node("retrieve", retrieve)
+    g.add_node("quick_retrieve", quick_retrieve)
+    g.add_node("rerank_retrieve", rerank_retrieve)  # Retrieves more docs for reranking
+    g.add_node("rerank", rerank)  # Reranks and filters to top_m documents
     g.add_node("synthesize", synthesize)
-    g.add_node("print_result", print_result)
 
-    g.add_edge(START, "retrieve")
-    g.add_edge("retrieve", "synthesize")
+    # Conditional routing from START based on use_reranker flag
+    g.add_conditional_edges(START, route_retriever, {
+        "quick_retrieve": "quick_retrieve",
+        "rerank_retrieve": "rerank_retrieve"
+    })
+
+    # Quick retrieve path: quick_retrieve -> synthesize
+    g.add_edge("quick_retrieve", "synthesize")
+
+    # Rerank path: rerank_retrieve -> rerank -> synthesize
+    g.add_edge("rerank_retrieve", "rerank")
+    g.add_edge("rerank", "synthesize")
+
     g.add_edge("synthesize", END)
     # g.add_conditional_edges("synthesize", route_output, {"print_result": "print_result", END: END})
     # g.add_edge("print_result", END)
