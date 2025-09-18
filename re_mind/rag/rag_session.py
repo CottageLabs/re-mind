@@ -3,7 +3,7 @@ from langchain.chains import LLMChain
 from langchain.chains import LLMChain
 
 from re_mind import pipelines
-from re_mind.llm import create_llm_huggingface
+from re_mind.language_models import create_llm_huggingface
 from re_mind.utils import re_mind_utils as llm_utils
 
 

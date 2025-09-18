@@ -10,7 +10,7 @@ from rich.rule import Rule
 
 from re_mind import components, pipelines
 from re_mind.db.qdrant.qdrant import get_client
-from re_mind.llm import create_llm_huggingface, create_openai_model
+from re_mind.language_models import create_llm_huggingface, create_openai_model
 from re_mind.pipelines import build_rag_app
 from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils
