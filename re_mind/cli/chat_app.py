@@ -1,9 +1,20 @@
 import rich
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from rich.markdown import Markdown
 from rich.panel import Panel
 
 from re_mind.rag.rag_session import RagSession
+
+def build_completer():
+    """
+    Build a nested completer dynamically so 'use <dataset>' picks up new names.
+    """
+    nested = NestedCompleter.from_nested_dict({
+        "/configs": None,
+        "/librarian": {"show": None,}
+    })
+    return FuzzyCompleter(nested)
 
 
 def run_chat_app():
@@ -31,14 +42,20 @@ def run_chat_app():
             return_full_text=config.get('huggingface_llm', {}).get('return_full_text', False)
         )
 
+    completer = build_completer()
+
     # Chat loop
-    # with patch_stdout():  # ensures prints don't garble the prompt
     while True:
         try:
-            user_input = prompt_session.prompt(">  ")
+            user_input = prompt_session.prompt(">  ", completer=completer)
         except (EOFError, KeyboardInterrupt):
             print("Exiting chat...")
             break
+
+        if user_input == '/configs':
+            console.print(Markdown("## Current Configuration"))
+            console.print(config)
+            continue
 
         # with console.status("Generating response..."):
         resp = rag_session.chat(user_input)
