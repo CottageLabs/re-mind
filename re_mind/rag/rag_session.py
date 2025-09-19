@@ -1,5 +1,4 @@
 from langchain.chains import LLMChain
-
 from langchain.chains import LLMChain
 
 from re_mind import pipelines
@@ -17,8 +16,8 @@ class RagSession:
         # llm = create_llm_huggingface('cuda')
         llm = create_llm_huggingface(
             device=device,
-            # model_id="google/gemma-3-1b-it",
-            model_id="google/gemma-3-4b-it",
+            model_id="google/gemma-3-1b-it",
+            # model_id="google/gemma-3-4b-it",
             # model_id="google/gemma-3-12b-it",
             # quantization_config=create_8bit_quantization_config(),
             # temperature=0.3,
@@ -26,8 +25,12 @@ class RagSession:
             return_full_text=return_full_text,
         )
 
-        self.rag_chain = pipelines.create_basic_qa(llm, n_top_result=n_top_result)
+        self.rag_chain = pipelines.build_rag_app(llm, n_top_result=n_top_result, )
 
     def chat(self, user_input, **kwargs):
-        response = self.rag_chain.invoke(user_input, **kwargs)
+        response = self.rag_chain.invoke(
+            {
+                'question': user_input
+            }
+        )
         return response

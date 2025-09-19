@@ -17,7 +17,7 @@ def run_chat_app():
         },
         'huggingface_llm': {
             'device': 'cuda',
-            'return_full_text': True,
+            'return_full_text': False,
         }
     }
     console = rich.console.Console()
@@ -40,11 +40,11 @@ def run_chat_app():
             print("Exiting chat...")
             break
 
-        with console.status("Generating response..."):
-            resp = rag_session.chat(user_input)
+        # with console.status("Generating response..."):
+        resp = rag_session.chat(user_input)
 
         width = min(console.size.width, config['chat']['max_width'])
-        output = Markdown(resp)
+        output = Markdown(resp['answer'])
         output = Panel(output)
         console.print(output, width=width)
 

@@ -28,7 +28,7 @@ def rerank_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
     return rerank_with_qa_ranker(question, docs, ranker, top_m=n_top_result)
 
 
-def complex_retrieve(question: str, llm, n_top_result: int = 8) -> List[Document]:
+def complex_retrieve(question: str, llm, n_top_result: int = 8) -> tuple[List[Document], List[str]]:
     vectorstore = components.get_vector_store()
     multi_query_retriever = vectorstore.as_retriever(
         search_type="similarity",
@@ -36,6 +36,9 @@ def complex_retrieve(question: str, llm, n_top_result: int = 8) -> List[Document
     )
 
     extracted_queries = llm_tasks.extract_queries_from_input(llm, question)
+    if not extracted_queries:
+        return [], []
+
     ranker = BGEQARanker()
 
     docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
