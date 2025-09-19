@@ -1,0 +1,50 @@
+from typing import List
+
+from langchain_core.documents import Document
+
+from re_mind import components, llm_tasks
+from re_mind.llm_tasks import retrieve_and_deduplicate_docs
+from re_mind.rankers import rerankers
+from re_mind.rankers.rerankers import rerank_with_qa_ranker, BGEQARanker
+
+
+def quick_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
+    vectorstore = components.get_vector_store()
+    quick_retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": n_top_result, "fetch_k": n_top_result + 40, "lambda_mult": 0.5},
+    )
+    return quick_retriever.invoke(question)
+
+
+def rerank_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
+    vectorstore = components.get_vector_store()
+    rerank_retriever = vectorstore.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": n_top_result + 20}
+    )
+    docs = rerank_retriever.invoke(question)
+    ranker = BGEQARanker()
+    return rerank_with_qa_ranker(question, docs, ranker, top_m=n_top_result)
+
+
+def complex_retrieve(question: str, llm, n_top_result: int = 8) -> List[Document]:
+    vectorstore = components.get_vector_store()
+    multi_query_retriever = vectorstore.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": n_top_result + 20}
+    )
+
+    extracted_queries = llm_tasks.extract_queries_from_input(llm, question)
+    ranker = BGEQARanker()
+
+    docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
+    scores = rerankers.cal_score_matrix(extracted_queries, docs, ranker=ranker)
+    top_docs = rerankers.aggregate_scores(scores, docs, k_final=n_top_result)
+
+    result_docs = []
+    for doc, score in top_docs:
+        doc.metadata["ranker_score"] = score
+        result_docs.append(doc)
+
+    return result_docs

@@ -11,11 +11,8 @@ from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode
 
-from re_mind import components, lc_prompts, llm_tasks
+from re_mind import components, lc_prompts, retrievers
 from re_mind.lc_prompts import DEFAULT_RAG_INSTRUCTION
-from re_mind.llm_tasks import retrieve_and_deduplicate_docs
-from re_mind.rankers import rerankers
-from re_mind.rankers.rerankers import rerank_with_qa_ranker, BGEQARanker
 
 
 def create_basic_qa(llm, n_top_result=8):
@@ -229,7 +226,6 @@ class RagState(TypedDict):
 def build_rag_app(
         llm: BaseChatModel,
         *,
-        vectorstore=None,
         n_top_result: int = 8,
         cite_metadata_keys: Tuple[str, ...] = ("source", "page"),
         instruction: str = DEFAULT_RAG_INSTRUCTION,
@@ -249,24 +245,6 @@ def build_rag_app(
         {"question": ..., "context": List[Document], "answer": str}
     """
 
-    if vectorstore is None:
-        vectorstore = components.get_vector_store()
-
-    quick_retriever = vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": n_top_result, "fetch_k": n_top_result + 40, "lambda_mult": 0.5},
-    )
-
-    rerank_retriever = vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": 60, "fetch_k": 180, "lambda_mult": 0.5},
-    )
-
-    multi_query_retriever = vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": 12, "fetch_k": 60, "lambda_mult": 0.5},
-    )
-
     # KTODO add plan before retrieve
     # KTODO add re-rank after retrieve
 
@@ -281,27 +259,16 @@ def build_rag_app(
             return "complex_retrieve"
 
     def quick_retrieve(state: RagState):
-        ctx: List[Document] = quick_retriever.invoke(state["question"])
-        return {"context": ctx}
+        docs: List[Document] = retrievers.quick_retrieve(state["question"], n_top_result)
+        return {"context": docs}
 
     def rerank_retrieve(state: RagState):
-        query = state["question"]
-        docs: List[Document] = rerank_retriever.invoke(query)
-        ranker = BGEQARanker()
-        reranked_docs = rerank_with_qa_ranker(query, docs, ranker, top_m=n_top_result)
-        return {"context": reranked_docs}
+        docs = retrievers.rerank_retrieve(state["question"], n_top_result)
+        return {"context": docs}
 
     def complex_retrieve(state: RagState):
-        extracted_queries = llm_tasks.extract_queries_from_input(llm, state["question"])
-        ranker = BGEQARanker()
-
-        docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
-        scores = rerankers.cal_score_matrix(extracted_queries, docs, ranker=ranker)
-        top_docs = rerankers.aggregate_scores(scores, docs, k_final=n_top_result)
-        for d, s in top_docs:
-            d.metadata["ranker_score"] = s
-        result_docs = [d for d, _ in top_docs]
-        return {"context": result_docs}
+        docs = retrievers.complex_retrieve(state["question"], llm, n_top_result)
+        return {"context": docs}
 
     def synthesize(state: RagState):
         docs: List[Document] = state.get("context", [])
@@ -316,7 +283,7 @@ def build_rag_app(
         prompt = lc_prompts.format_rag_prompt(instruction, context_text, state['question'])
 
         ai_msg = llm.invoke(prompt)
-        answer = getattr(ai_msg, "content", ai_msg)  # be resilient to different return types
+        answer = ai_msg.content
 
         # Simple sources footer using chosen metadata keys
         if docs:
