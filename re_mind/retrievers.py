@@ -47,4 +47,4 @@ def complex_retrieve(question: str, llm, n_top_result: int = 8) -> List[Document
         doc.metadata["ranker_score"] = score
         result_docs.append(doc)
 
-    return result_docs
+    return result_docs, extracted_queries

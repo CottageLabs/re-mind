@@ -221,6 +221,7 @@ class RagState(TypedDict):
     context: List[Document]
     answer: str
     query_model: Literal['quick', 'rerank', 'complex']
+    extracted_queries: List[str] | None
 
 
 def build_rag_app(
@@ -245,9 +246,6 @@ def build_rag_app(
         {"question": ..., "context": List[Document], "answer": str}
     """
 
-    # KTODO add plan before retrieve
-    # KTODO add re-rank after retrieve
-
     # Prefer not to mutate the incoming retriever; use a k-override if supported.
     def route_retriever(state: RagState):
         query_model = state.get("query_model", 'complex')
@@ -267,8 +265,8 @@ def build_rag_app(
         return {"context": docs}
 
     def complex_retrieve(state: RagState):
-        docs = retrievers.complex_retrieve(state["question"], llm, n_top_result)
-        return {"context": docs}
+        docs, extracted_queries = retrievers.complex_retrieve(state["question"], llm, n_top_result)
+        return {"context": docs, "extracted_queries": extracted_queries}
 
     def synthesize(state: RagState):
         docs: List[Document] = state.get("context", [])
