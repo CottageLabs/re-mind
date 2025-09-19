@@ -435,8 +435,9 @@ def main12__try_rqg_graph():
         llm=llm,
         n_top_result=n_top_result,
     )
-    question = "Tell me about machine learning"
+    # question = "Tell me about machine learning"
     # question = "Write a report that about reinforcement learning"
+    question = 'hi'
     resp = app.invoke({
         "question": question,
         'query_model': 'complex',
