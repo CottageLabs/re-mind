@@ -47,7 +47,7 @@ def build_completer():
 
 @dataclass
 class ChatSession:
-    rag_session: RagChat
+    rag_chat: RagChat
     config: dict
     console: rich.console.Console
 
@@ -68,18 +68,18 @@ def run_chat_app():
     console = rich.console.Console()
     prompt_session = PromptSession()
     with console.status("Initializing RAG session..."):
-        # rag_session = RagChat.create_by_huggingface(
+        # rag_chat = RagChat.create_by_huggingface(
         #     temperature=config.get('temperature', 1.2),
         #     n_top_result=config.get('n_top_result', 8),
         #     device=config.get('device'),
         #     return_full_text=config.get('return_full_text', False)
         # )
-        rag_session = RagChat.create_by_openai(n_top_result=config.get('n_top_result', 8))
+        rag_chat = RagChat.create_by_openai(n_top_result=config.get('n_top_result', 8))
 
     completer = build_completer()
 
     cs = ChatSession(
-        rag_session=rag_session,
+        rag_chat=rag_chat,
         config=config,
         console=console,
     )
@@ -107,7 +107,7 @@ def run_chat_app():
             continue
 
         # with cs.console.status("Generating response..."):
-        resp = cs.rag_session.chat(user_input)
+        resp = cs.rag_chat.chat(user_input)
 
         width = min(cs.console.size.width, cs.config['max_width'])
         output = Markdown(resp['answer'])
