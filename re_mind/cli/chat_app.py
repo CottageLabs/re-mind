@@ -1,10 +1,38 @@
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
 import rich
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from re_mind.rag.rag_session import RagSession
+from re_mind.rag.rag_session import RagChat
+
+
+class CompleterHelper(ABC):
+    def __init__(self, prefix: str):
+        self.prefix = prefix
+
+    def is_match(self, user_input: str) -> bool:
+        return user_input.startswith(self.prefix)
+
+    def create_nested_dict(self):
+        return {self.prefix: None}
+
+    @abstractmethod
+    def run(self, user_input: str, cs: 'ChatSession'):
+        raise NotImplementedError
+
+
+class ConfigsCompleterHelper(CompleterHelper):
+    def __init__(self, ):
+        super().__init__('/configs')
+
+    def run(self, user_input: str, cs: 'ChatSession'):
+        cs.console.print(Markdown("## Current Configuration"))
+        cs.console.print(cs.config)
+
 
 def build_completer():
     """
@@ -12,37 +40,53 @@ def build_completer():
     """
     nested = NestedCompleter.from_nested_dict({
         "/configs": None,
-        "/librarian": {"show": None,}
+        "/librarian": {"show": None, }
     })
     return FuzzyCompleter(nested)
 
 
+@dataclass
+class ChatSession:
+    rag_session: RagChat
+    config: dict
+    console: rich.console.Console
+
+
 def run_chat_app():
     config = {
-        'chat': {
-            'max_width': 100
-        },
-        'rag_session': {
-            'temperature': 1.2,
-            'n_top_result': 6,
-        },
-        'huggingface_llm': {
-            'device': 'cuda',
-            'return_full_text': False,
-        }
+        # Chat
+        'max_width': 100,
+
+        # RAG Session
+        'temperature': 1.2,
+        'n_top_result': 6,
+
+        # Hugging Face LLM
+        'device': 'cuda',
+        'return_full_text': False,
     }
     console = rich.console.Console()
     prompt_session = PromptSession()
     with console.status("Initializing RAG session..."):
-        rag_config = config.get('rag_session', {})
-        rag_session = RagSession(
-            temperature=rag_config.get('temperature', 1.2),
-            n_top_result=rag_config.get('n_top_result', 8),
-            device=config.get('huggingface_llm', {}).get('device'),
-            return_full_text=config.get('huggingface_llm', {}).get('return_full_text', False)
-        )
+        # rag_session = RagChat.create_by_huggingface(
+        #     temperature=config.get('temperature', 1.2),
+        #     n_top_result=config.get('n_top_result', 8),
+        #     device=config.get('device'),
+        #     return_full_text=config.get('return_full_text', False)
+        # )
+        rag_session = RagChat.create_by_openai(n_top_result=config.get('n_top_result', 8))
 
     completer = build_completer()
+
+    cs = ChatSession(
+        rag_session=rag_session,
+        config=config,
+        console=console,
+    )
+
+    completer_helpers = [
+        ConfigsCompleterHelper(),
+    ]
 
     # Chat loop
     while True:
@@ -52,18 +96,23 @@ def run_chat_app():
             print("Exiting chat...")
             break
 
-        if user_input == '/configs':
-            console.print(Markdown("## Current Configuration"))
-            console.print(config)
+        should_chat = True
+        for helper in completer_helpers:
+            if helper.is_match(user_input):
+                helper.run(user_input, cs)
+                should_chat = False
+                break
+
+        if not should_chat:
             continue
 
-        # with console.status("Generating response..."):
-        resp = rag_session.chat(user_input)
+        # with cs.console.status("Generating response..."):
+        resp = cs.rag_session.chat(user_input)
 
-        width = min(console.size.width, config['chat']['max_width'])
+        width = min(cs.console.size.width, cs.config['max_width'])
         output = Markdown(resp['answer'])
         output = Panel(output)
-        console.print(output, width=width)
+        cs.console.print(output, width=width)
 
 
 def main():
