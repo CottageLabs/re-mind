@@ -13,6 +13,7 @@ from re_mind.db.qdrant.qdrant import get_client
 from re_mind.language_models import create_llm_huggingface
 from re_mind.llm_tasks import extract_queries_from_input, retrieve_and_deduplicate_docs
 from re_mind.pipelines import build_rag_app
+from re_mind.rag.rag_chat import RagChat
 from re_mind.rankers import rerankers
 from re_mind.text_processing import save_pdf_to_vectorstore
 from re_mind.utils import re_mind_utils as llm_utils, iter_utils
@@ -436,8 +437,8 @@ def main12__try_rqg_graph():
         n_top_result=n_top_result,
     )
     # question = "Tell me about machine learning"
-    # question = "Write a report that about reinforcement learning"
-    question = 'hi'
+    question = "Write a report that about reinforcement learning"
+    # question = 'hi'
     resp = app.invoke({
         "question": question,
         'query_model': 'complex',
@@ -516,6 +517,10 @@ def main14__test_query_extraction_prompt():
             console.print(f"     Page: {d.metadata.get('page', 'Unknown')}")
             console.print()
 
+def main15():
+    c = RagChat.create_by_openai()
+    x = c.chat('what is reinforcement learning')
+    print(x)
 
 if __name__ == "__main__":
     # main7__load_pdf()
@@ -526,4 +531,5 @@ if __name__ == "__main__":
     # main9__try_demo_graph()
     # main11__hugging_face_tools()
     main12__try_rqg_graph()
+    # main15()
     # main14__test_query_extraction_prompt()
