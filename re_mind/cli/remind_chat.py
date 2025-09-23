@@ -62,8 +62,7 @@ class SearchCH(CompleterHelper):
             cs.print("Example: /search What is the capital of France?")
             return
 
-        docs, extracted_queries = retrievers.complex_retrieve(query, cs.llm,
-                                                              cs.config['n_top_result'])
+        docs, extracted_queries = retrievers.complex_retrieve(query, cs.llm, cs.config['n_top_result'])
 
         cs.print(Markdown("## Search Results"))
         cs.print(Markdown(f"**Query:** {query}"))
@@ -150,7 +149,6 @@ def run_remind_chat():
         # )
         rag_chat = RagChat.create_by_openai(n_top_result=config.get('n_top_result', 8))
 
-    completer = build_completer()
 
     cs = ChatSession(
         rag_chat=rag_chat,
@@ -162,6 +160,7 @@ def run_remind_chat():
         ConfigsCH(),
         SearchCH(),
     ]
+    completer = build_completer(completer_helpers)
 
     # Chat loop
     while True:

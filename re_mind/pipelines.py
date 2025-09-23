@@ -289,7 +289,7 @@ def build_rag_app(
             for idx, d in enumerate(docs, start=1):
                 meta = [str(d.metadata.get(k)) for k in cite_metadata_keys if d.metadata.get(k) is not None]
                 if meta:
-                    lines.append(f"[{idx}] " + " – ".join(meta))
+                    lines.append(f"- [{idx}] " + " – ".join(meta))
             if lines:
                 answer += "\n\nSources:\n" + "\n".join(lines)
 
