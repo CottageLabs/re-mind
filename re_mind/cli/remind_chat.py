@@ -1,7 +1,6 @@
-from abc import ABC, abstractmethod
 import re
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Literal
 
 import rich
 from prompt_toolkit import PromptSession
@@ -41,15 +40,15 @@ class ConfigsCH(CompleterHelper):
         super().__init__('/configs')
 
     def run(self, user_input: str, cs: 'ChatSession'):
-        cs.console.print(Markdown("## Configuration Commands"))
-        cs.console.print(Markdown("""```
+        cs.print(Markdown("## Configuration Commands"))
+        cs.print(Markdown("""```
 Examples:
 /configs                  # show configs
 /configs n_top_result 8   # change configs
 ```"""))
-        cs.console.print()
-        cs.console.print(Markdown("## Current Configuration"))
-        cs.console.print(cs.config)
+        cs.print()
+        cs.print(Markdown("## Current Configuration"))
+        cs.print(cs.config)
 
 
 class SearchCH(CompleterHelper):
@@ -59,37 +58,34 @@ class SearchCH(CompleterHelper):
     def run(self, user_input: str, cs: 'ChatSession'):
         query = re.sub(r'^/search\s+', '', user_input).strip()
         if not query:
-            cs.console.print("Please provide a search query after '/search'.")
-            cs.console.print("Example: /search What is the capital of France?")
+            cs.print("Please provide a search query after '/search'.")
+            cs.print("Example: /search What is the capital of France?")
             return
-
 
         docs, extracted_queries = retrievers.complex_retrieve(query, cs.llm,
                                                               cs.config['n_top_result'])
 
-        cs.console.print(Markdown("## Search Results"))
-        cs.console.print(Markdown(f"**Query:** {query}"))
-        cs.console.print()
+        cs.print(Markdown("## Search Results"))
+        cs.print(Markdown(f"**Query:** {query}"))
+        cs.print()
 
         if extracted_queries:
             queries_text = "### Extracted Queries\n" \
                            + "\n".join(f"{i}. {eq}" for i, eq in enumerate(extracted_queries, 1))
-            cs.console.print(Markdown(queries_text))
-            cs.console.print()
+            cs.print(Markdown(queries_text))
+            cs.print()
 
-        cs.console.print(Markdown(f"### Documents ({len(docs)} found)"))
+        cs.print(Markdown(f"### Documents ({len(docs)} found)"))
         for i, doc in enumerate(docs, 1):
-            content = doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+            content = doc.page_content[:400] + "..." if len(doc.page_content) > 400 else doc.page_content
             source = doc.metadata.get('source', 'Unknown')
             page = doc.metadata.get('page', '')
             score = doc.metadata.get('ranker_score', 0)
 
-            cs.console.print(Markdown(f"**{i}.** Score: {score:.2f}"))
-            cs.console.print(Markdown(f"   **Source:** {source}" + (f" (page {page})" if page else "")))
-            cs.console.print(Markdown(f"   **Content:** {content}"))
-            cs.console.print()
-
-
+            cs.print(Markdown(f"**{i}.** Score: {score:.2f}"))
+            cs.print(Markdown(f"   **Source:** {source}" + (f" (page {page})" if page else "")))
+            cs.print(Markdown(f"   **Content:** {content}"))
+            cs.print()
 
 
 def build_completer(completer_helpers: list[CompleterHelper] | None = None) -> FuzzyCompleter:
@@ -118,6 +114,16 @@ class ChatSession:
     @property
     def llm(self):
         return self.rag_chat.llm
+
+    @property
+    def console_width(self):
+        return min(self.console.size.width, self.config.get('max_width', 100))
+
+    def print(self, message=None):
+        if message is None:
+            self.console.print()
+        else:
+            self.console.print(message, width=self.console_width)
 
 
 def run_remind_chat():
@@ -181,10 +187,9 @@ def run_remind_chat():
         # with cs.console.status("Generating response..."):
         resp = cs.rag_chat.chat(user_input)
 
-        width = min(cs.console.size.width, cs.config['max_width'])
         output = Markdown(resp['answer'])
         output = Panel(output)
-        cs.console.print(output, width=width)
+        cs.print(output)
 
 
 def main():
