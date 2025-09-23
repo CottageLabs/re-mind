@@ -2,10 +2,10 @@ from langchain.chains import LLMChain
 
 from re_mind import pipelines
 
-
 class RagChat:
 
     def __init__(self, llm, n_top_result=8):
+        self.llm = llm
         self.rag_chain = pipelines.build_rag_app(llm, n_top_result=n_top_result, )
 
     @classmethod
