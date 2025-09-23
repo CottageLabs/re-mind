@@ -111,6 +111,7 @@ def topk_mean(a: np.ndarray, k: int, axis: int = 0) -> np.ndarray:
     Mean of the top-k values along an axis, ignoring NaNs.
     For NaNs, we treat them as -inf so they don't enter the top-k.
     """
+    k = min(k, a.shape[axis])
     a_ = np.where(np.isnan(a), -np.inf, a)
     # np.partition gives kth order stats; we take the last k slices
     part = np.partition(a_, -k, axis=axis)

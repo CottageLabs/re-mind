@@ -6,6 +6,8 @@ from re_mind import components, llm_tasks
 from re_mind.llm_tasks import retrieve_and_deduplicate_docs
 from re_mind.rankers import rerankers
 from re_mind.rankers.rerankers import rerank_with_qa_ranker, BGEQARanker
+import logging
+log = logging.getLogger(__name__)
 
 
 def quick_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
@@ -37,7 +39,8 @@ def complex_retrieve(question: str, llm, n_top_result: int = 8) -> tuple[List[Do
 
     extracted_queries = llm_tasks.extract_queries_from_input(llm, question)
     if not extracted_queries:
-        return [], []
+        log.warning("No queries extracted from input.")
+        extracted_queries = [question]
 
     ranker = BGEQARanker()
 
