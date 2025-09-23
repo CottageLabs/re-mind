@@ -120,7 +120,7 @@ class ChatSession:
         return self.rag_chat.llm
 
 
-def run_chat_app():
+def run_remind_chat():
     config = {
         # Chat
         'max_width': 100,
@@ -188,7 +188,7 @@ def run_chat_app():
 
 
 def main():
-    run_chat_app()
+    run_remind_chat()
 
 
 if __name__ == '__main__':

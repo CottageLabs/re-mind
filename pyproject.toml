@@ -36,5 +36,5 @@ include = ["re_mind*"]
 
 
 [project.scripts]
-remind-chat = "re_mind.cli.chat_app:main"
+remind-chat = "re_mind.cli.remind_chat:main"
 re-mind = "re_mind.cli.re_mind_cli:main"
