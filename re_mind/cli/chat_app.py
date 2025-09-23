@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+import re
 from dataclasses import dataclass
+from typing import Literal
 
 import rich
 from prompt_toolkit import PromptSession
@@ -7,7 +9,16 @@ from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from re_mind.rag.rag_session import RagChat
+from re_mind import retrievers
+from re_mind.rag.rag_chat import RagChat
+
+
+# KTODO support change model
+# KTODO support search only mode
+# KTODO support librarian mode (list, add, remove documents)
+# KTODO support switch query mode
+# KTODO add command librarian
+# KTODO add history
 
 
 class CompleterHelper(ABC):
@@ -25,23 +36,76 @@ class CompleterHelper(ABC):
         raise NotImplementedError
 
 
-class ConfigsCompleterHelper(CompleterHelper):
+class ConfigsCH(CompleterHelper):
     def __init__(self, ):
         super().__init__('/configs')
 
     def run(self, user_input: str, cs: 'ChatSession'):
+        cs.console.print(Markdown("## Configuration Commands"))
+        cs.console.print(Markdown("""```
+Examples:
+/configs                  # show configs
+/configs n_top_result 8   # change configs
+```"""))
+        cs.console.print()
         cs.console.print(Markdown("## Current Configuration"))
         cs.console.print(cs.config)
 
 
-def build_completer():
+class SearchCH(CompleterHelper):
+    def __init__(self, ):
+        super().__init__('/search ')
+
+    def run(self, user_input: str, cs: 'ChatSession'):
+        query = re.sub(r'^/search\s+', '', user_input).strip()
+        if not query:
+            cs.console.print("Please provide a search query after '/search'.")
+            cs.console.print("Example: /search What is the capital of France?")
+            return
+
+
+        docs, extracted_queries = retrievers.complex_retrieve(query, cs.llm,
+                                                              cs.config['n_top_result'])
+
+        cs.console.print(Markdown("## Search Results"))
+        cs.console.print(Markdown(f"**Query:** {query}"))
+        cs.console.print()
+
+        if extracted_queries:
+            queries_text = "### Extracted Queries\n" \
+                           + "\n".join(f"{i}. {eq}" for i, eq in enumerate(extracted_queries, 1))
+            cs.console.print(Markdown(queries_text))
+            cs.console.print()
+
+        cs.console.print(Markdown(f"### Documents ({len(docs)} found)"))
+        for i, doc in enumerate(docs, 1):
+            content = doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+            source = doc.metadata.get('source', 'Unknown')
+            page = doc.metadata.get('page', '')
+            score = doc.metadata.get('ranker_score', 0)
+
+            cs.console.print(Markdown(f"**{i}.** Score: {score:.2f}"))
+            cs.console.print(Markdown(f"   **Source:** {source}" + (f" (page {page})" if page else "")))
+            cs.console.print(Markdown(f"   **Content:** {content}"))
+            cs.console.print()
+
+
+
+
+def build_completer(completer_helpers: list[CompleterHelper] | None = None) -> FuzzyCompleter:
     """
     Build a nested completer dynamically so 'use <dataset>' picks up new names.
     """
-    nested = NestedCompleter.from_nested_dict({
+    # KTODO fix /search not working
+    data = {
         "/configs": None,
         "/librarian": {"show": None, }
-    })
+    }
+
+    for helper in (completer_helpers or []):
+        data.update(helper.create_nested_dict())
+
+    nested = NestedCompleter.from_nested_dict(data)
     return FuzzyCompleter(nested)
 
 
@@ -50,6 +114,10 @@ class ChatSession:
     rag_chat: RagChat
     config: dict
     console: rich.console.Console
+
+    @property
+    def llm(self):
+        return self.rag_chat.llm
 
 
 def run_chat_app():
@@ -85,13 +153,17 @@ def run_chat_app():
     )
 
     completer_helpers = [
-        ConfigsCompleterHelper(),
+        ConfigsCH(),
+        SearchCH(),
     ]
 
     # Chat loop
     while True:
         try:
             user_input = prompt_session.prompt(">  ", completer=completer)
+            if not user_input.strip():
+                continue
+
         except (EOFError, KeyboardInterrupt):
             print("Exiting chat...")
             break
