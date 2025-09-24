@@ -194,6 +194,10 @@ class ChatSession:
             self.print(f"[red]Model option '{model_option_name}' not found.[/red]")
             raise ValueError(f"Model option '{model_option_name}' not found.")
 
+        if selected_option.name == (self.model_option.name if self.model_option else None):
+            # same model, do nothing
+            return self
+
         # delete previous model to free VRAM
         if self.model_option is not None:
             self.model_option.delete()
