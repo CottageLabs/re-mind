@@ -9,6 +9,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from re_mind import retrievers
+from re_mind.cli.components.model_options import ModelOption
 from re_mind.rag.rag_chat import RagChat
 
 
@@ -18,8 +19,12 @@ from re_mind.rag.rag_chat import RagChat
 # KTODO support switch query mode
 # KTODO add command librarian
 # KTODO add history
+# KTODO add debugging / detail mode
+# KTODO output_model [debugging / detail / simple]
 
 
+# KTODO move to new file
+# KTODO suggest a better name
 class CompleterHelper(ABC):
     def __init__(self, prefix: str):
         self.prefix = prefix
@@ -53,7 +58,7 @@ Examples:
 
 class SearchCH(CompleterHelper):
     def __init__(self, ):
-        super().__init__('/search ')
+        super().__init__('/search')
 
     def run(self, user_input: str, cs: 'ChatSession'):
         query = re.sub(r'^/search\s+', '', user_input).strip()
@@ -87,14 +92,37 @@ class SearchCH(CompleterHelper):
             cs.print()
 
 
+class ModelsCH(CompleterHelper):
+    def __init__(self):
+        super().__init__('/models')
+
+    def run(self, user_input: str, cs: 'ChatSession'):
+        cs.print(Markdown("## Available Model Options"))
+        cs.print(Markdown(
+            '\n'.join(
+                f'- {m.name}' for m in cs.get_available_models()
+            )
+        ))
+        cs.print()
+
+
+class StatusCH(CompleterHelper):
+    def __init__(self):
+        super().__init__('/status')
+
+    def run(self, user_input: str, cs: 'ChatSession'):
+        cs.print(Markdown("## Current Status"))
+        model_name = cs.model_option.name if cs.model_option else "No model selected"
+        cs.print(Markdown(f"**Selected Model:** {model_name}"))
+        cs.print()
+
+
 def build_completer(completer_helpers: list[CompleterHelper] | None = None) -> FuzzyCompleter:
     """
     Build a nested completer dynamically so 'use <dataset>' picks up new names.
     """
-    # KTODO fix /search not working
     data = {
-        "/configs": None,
-        "/librarian": {"show": None, }
+        "/librarian": {"show": None, },  # KTODO add librarian commands
     }
 
     for helper in (completer_helpers or []):
@@ -106,13 +134,14 @@ def build_completer(completer_helpers: list[CompleterHelper] | None = None) -> F
 
 @dataclass
 class ChatSession:
-    rag_chat: RagChat
     config: dict
     console: rich.console.Console
+    rag_chat: RagChat = None
+    model_option: ModelOption = None
 
     @property
     def llm(self):
-        return self.rag_chat.llm
+        return self.rag_chat.llm if self.rag_chat else None
 
     @property
     def console_width(self):
@@ -123,6 +152,37 @@ class ChatSession:
             self.console.print()
         else:
             self.console.print(message, width=self.console_width)
+
+    @staticmethod
+    def get_available_models():
+        from re_mind.cli.components.model_options import HuggingFaceModelOption, OpenAIModelOption
+        return [
+            HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
+            OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
+        ]
+
+    def switch_llm(self, model_option_name: str):
+        selected_option = None
+        model_option_name = model_option_name.lower().strip()
+        for model_option in self.get_available_models():
+            if model_option.name.lower() == model_option_name:
+                selected_option = model_option
+                break
+
+        if selected_option is None:
+            self.print(f"[red]Model option '{model_option_name}' not found.[/red]")
+            raise ValueError(f"Model option '{model_option_name}' not found.")
+
+        # delete previous model to free VRAM
+        if self.model_option is not None:
+            self.model_option.delete()
+
+        # set new model
+        self.model_option = selected_option
+        llm = selected_option.create()
+        self.rag_chat = RagChat(llm=llm, n_top_result=self.config.get('n_top_result', 8))
+
+        return self
 
 
 def run_remind_chat():
@@ -141,24 +201,16 @@ def run_remind_chat():
     console = rich.console.Console()
     prompt_session = PromptSession()
     with console.status("Initializing RAG session..."):
-        # rag_chat = RagChat.create_by_huggingface(
-        #     temperature=config.get('temperature', 1.2),
-        #     n_top_result=config.get('n_top_result', 8),
-        #     device=config.get('device'),
-        #     return_full_text=config.get('return_full_text', False)
-        # )
-        rag_chat = RagChat.create_by_openai(n_top_result=config.get('n_top_result', 8))
-
-
-    cs = ChatSession(
-        rag_chat=rag_chat,
-        config=config,
-        console=console,
-    )
+        cs = ChatSession(
+            config=config,
+            console=console,
+        ).switch_llm("gemma-3-1b")
 
     completer_helpers = [
         ConfigsCH(),
         SearchCH(),
+        ModelsCH(),
+        StatusCH(),
     ]
     completer = build_completer(completer_helpers)
 
