@@ -13,14 +13,17 @@ from re_mind.cli.components.model_options import ModelOption
 from re_mind.rag.rag_chat import RagChat
 
 
-# KTODO support change model
-# KTODO support search only mode
 # KTODO support librarian mode (list, add, remove documents)
 # KTODO support switch query mode
 # KTODO add command librarian
 # KTODO add history
 # KTODO add debugging / detail mode
 # KTODO output_model [debugging / detail / simple]
+
+
+def extract_command_arg(command_prefix: str, user_input: str) -> str:
+    """Extract argument from command input by removing the command prefix."""
+    return re.sub(rf'^{re.escape(command_prefix)}\b\s*', '', user_input).strip()
 
 
 # KTODO move to new file
@@ -61,7 +64,7 @@ class SearchCH(CompleterHelper):
         super().__init__('/search')
 
     def run(self, user_input: str, cs: 'ChatSession'):
-        query = re.sub(r'^/search\s+', '', user_input).strip()
+        query = extract_command_arg(self.prefix, user_input)
         if not query:
             cs.print("Please provide a search query after '/search'.")
             cs.print("Example: /search What is the capital of France?")
@@ -97,13 +100,31 @@ class ModelsCH(CompleterHelper):
         super().__init__('/models')
 
     def run(self, user_input: str, cs: 'ChatSession'):
-        cs.print(Markdown("## Available Model Options"))
-        cs.print(Markdown(
-            '\n'.join(
-                f'- {m.name}' for m in cs.get_available_models()
-            )
-        ))
-        cs.print()
+        model_name = extract_command_arg(self.prefix, user_input)
+        if model_name:
+            # Switch model
+            try:
+                cs.switch_llm(model_name)
+                cs.print(f"[green]Switched to model: {cs.model_option.name}[/green]")
+            except ValueError:
+                cs.print(f"[red]Model option '{model_name}' not found.[/red]")
+
+        else:
+            # List available models
+            cs.print(Markdown(f"## Available Model Options"))
+            cs.print(Markdown(f"""```
+Examples:
+{self.prefix} gemma-3-1b       # switch to gemma-3-1b model
+```"""))
+            available_models = []
+            current_model_name = cs.model_option.name if cs.model_option else None
+            for m in cs.get_available_models():
+                is_current = current_model_name and m.name == current_model_name
+                model_display = f'- **{m.name}** (current)' if is_current else f'- {m.name}'
+                available_models.append(model_display)
+
+            cs.print(Markdown('\n'.join(available_models)))
+            cs.print()
 
 
 class StatusCH(CompleterHelper):
@@ -213,6 +234,7 @@ def run_remind_chat():
         StatusCH(),
     ]
     completer = build_completer(completer_helpers)
+    # KTODO add assert to check command prefix not conflict
 
     # Chat loop
     while True:
