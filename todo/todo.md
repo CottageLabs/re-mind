@@ -20,8 +20,15 @@
 - [ ] KTODO add re-rank after retrieve
 - [ ] add node to extract query from user input
 - [ ] add node to generate more query from base query
+- [ ] try different embedding model, e.g. word, sentence, document embedding
 
 ## Human interface
 
 - [ ] Cli interface with click + rich
 - [ ] Web UI with flask + react
+
+
+
+## Remin Chat
+- [x] support search only mode 
+- [x] support switch llm
