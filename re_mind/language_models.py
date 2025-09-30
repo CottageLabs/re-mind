@@ -1,8 +1,12 @@
+import logging
+
 import torch
 from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
 from transformers import pipeline, AutoTokenizer
 
 from re_mind.utils.re_mind_utils import get_global_device
+
+log = logging.getLogger(__name__)
 
 
 def create_8bit_quantization_config():
@@ -35,19 +39,26 @@ def create_llm_huggingface(device=None, model_id="google/gemma-3-1b-it", tempera
     model_kwargs = {
         "temperature": temperature, "max_length": max_length,
     }
+
+    if device == 'cpu':
+        model_kwargs["torch_dtype"] = torch.float32  # or torch.bfloat16, torch.float16 if your CPU supports it
+        # model_kwargs["low_cpu_mem_usage"] = True
+
     if quantization_config is not None:
-        model_kwargs["quantization_config"] = quantization_config
+        if device == 'cpu':
+            log.warning("Quantization is not needed on CPU, ignoring quantization_config")
+        else:
+            model_kwargs["quantization_config"] = quantization_config
 
     llm = HuggingFacePipeline.from_model_id(model_id=model_id, task="text-generation",
                                             model_kwargs=model_kwargs,
                                             # pipeline_kwargs={"device_map": device},
+                                            device=0 if device != 'cpu' else -1,
                                             pipeline_kwargs={
                                                 "return_full_text": return_full_text,
                                                 "max_new_tokens": 1000,
                                                 "do_sample": True,
-                                                "device_map": device
                                             },
-
                                             )
 
     chat = ChatHuggingFace(llm=llm)

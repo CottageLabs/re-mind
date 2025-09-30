@@ -1,16 +1,17 @@
-import re
+import logging
 from dataclasses import dataclass
 
 import rich
+import torch
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, StatusCommand
 from re_mind.cli.components.model_options import ModelOption
 from re_mind.rag.rag_chat import RagChat
-from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, StatusCommand
-
+from re_mind.utils import re_mind_utils
 
 # KTODO support librarian mode (list, add, remove documents)
 # KTODO support switch query mode
@@ -18,6 +19,8 @@ from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, Mod
 # KTODO add history
 # KTODO add debugging / detail mode
 # KTODO output_model [debugging / detail / simple]
+
+log = logging.getLogger(__name__)
 
 
 def build_completer(commands: list[ChatCommand] | None = None) -> FuzzyCompleter:
@@ -86,7 +89,13 @@ class ChatSession:
 
         # set new model
         self.model_option = selected_option
-        llm = selected_option.create()
+        try:
+            llm = selected_option.create()
+        except torch.OutOfMemoryError:
+            log.warning("OutOfMemoryError when loading model on GPU, retrying on CPU")
+            selected_option.device = 'cpu'
+            re_mind_utils.set_global_device('cpu')
+            llm = selected_option.create()
         self.rag_chat = RagChat(llm=llm, n_top_result=self.config.get('n_top_result', 8))
 
         return self
