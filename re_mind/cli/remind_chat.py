@@ -1,5 +1,4 @@
 import re
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import rich
@@ -8,9 +7,9 @@ from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from re_mind import retrievers
 from re_mind.cli.components.model_options import ModelOption
 from re_mind.rag.rag_chat import RagChat
+from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, StatusCommand
 
 
 # KTODO support librarian mode (list, add, remove documents)
@@ -21,124 +20,7 @@ from re_mind.rag.rag_chat import RagChat
 # KTODO output_model [debugging / detail / simple]
 
 
-def extract_command_arg(command_prefix: str, user_input: str) -> str:
-    """Extract argument from command input by removing the command prefix."""
-    return re.sub(rf'^{re.escape(command_prefix)}\b\s*', '', user_input).strip()
-
-
-# KTODO move to new file
-# KTODO suggest a better name
-class CompleterHelper(ABC):
-    def __init__(self, prefix: str):
-        self.prefix = prefix
-
-    def is_match(self, user_input: str) -> bool:
-        return user_input.startswith(self.prefix)
-
-    def create_nested_dict(self):
-        return {self.prefix: None}
-
-    @abstractmethod
-    def run(self, user_input: str, cs: 'ChatSession'):
-        raise NotImplementedError
-
-
-class ConfigsCH(CompleterHelper):
-    def __init__(self, ):
-        super().__init__('/configs')
-
-    def run(self, user_input: str, cs: 'ChatSession'):
-        cs.print(Markdown("## Configuration Commands"))
-        cs.print(Markdown("""```
-Examples:
-/configs                  # show configs
-/configs n_top_result 8   # change configs
-```"""))
-        cs.print()
-        cs.print(Markdown("## Current Configuration"))
-        cs.print(cs.config)
-
-
-class SearchCH(CompleterHelper):
-    def __init__(self, ):
-        super().__init__('/search')
-
-    def run(self, user_input: str, cs: 'ChatSession'):
-        query = extract_command_arg(self.prefix, user_input)
-        if not query:
-            cs.print("Please provide a search query after '/search'.")
-            cs.print("Example: /search What is the capital of France?")
-            return
-
-        docs, extracted_queries = retrievers.complex_retrieve(query, cs.llm, cs.config['n_top_result'])
-
-        cs.print(Markdown("## Search Results"))
-        cs.print(Markdown(f"**Query:** {query}"))
-        cs.print()
-
-        if extracted_queries:
-            queries_text = "### Extracted Queries\n" \
-                           + "\n".join(f"{i}. {eq}" for i, eq in enumerate(extracted_queries, 1))
-            cs.print(Markdown(queries_text))
-            cs.print()
-
-        cs.print(Markdown(f"### Documents ({len(docs)} found)"))
-        for i, doc in enumerate(docs, 1):
-            content = doc.page_content[:400] + "..." if len(doc.page_content) > 400 else doc.page_content
-            source = doc.metadata.get('source', 'Unknown')
-            page = doc.metadata.get('page', '')
-            score = doc.metadata.get('ranker_score', 0)
-
-            cs.print(Markdown(f"**{i}.** Score: {score:.2f}"))
-            cs.print(Markdown(f"   **Source:** {source}" + (f" (page {page})" if page else "")))
-            cs.print(Markdown(f"   **Content:** {content}"))
-            cs.print()
-
-
-class ModelsCH(CompleterHelper):
-    def __init__(self):
-        super().__init__('/models')
-
-    def run(self, user_input: str, cs: 'ChatSession'):
-        model_name = extract_command_arg(self.prefix, user_input)
-        if model_name:
-            # Switch model
-            try:
-                cs.switch_llm(model_name)
-                cs.print(f"[green]Switched to model: {cs.model_option.name}[/green]")
-            except ValueError:
-                cs.print(f"[red]Model option '{model_name}' not found.[/red]")
-
-        else:
-            # List available models
-            cs.print(Markdown(f"## Available Model Options"))
-            cs.print(Markdown(f"""```
-Examples:
-{self.prefix} gemma-3-1b       # switch to gemma-3-1b model
-```"""))
-            available_models = []
-            current_model_name = cs.model_option.name if cs.model_option else None
-            for m in cs.get_available_models():
-                is_current = current_model_name and m.name == current_model_name
-                model_display = f'- **{m.name}** (current)' if is_current else f'- {m.name}'
-                available_models.append(model_display)
-
-            cs.print(Markdown('\n'.join(available_models)))
-            cs.print()
-
-
-class StatusCH(CompleterHelper):
-    def __init__(self):
-        super().__init__('/status')
-
-    def run(self, user_input: str, cs: 'ChatSession'):
-        cs.print(Markdown("## Current Status"))
-        model_name = cs.model_option.name if cs.model_option else "No model selected"
-        cs.print(Markdown(f"**Selected Model:** {model_name}"))
-        cs.print()
-
-
-def build_completer(completer_helpers: list[CompleterHelper] | None = None) -> FuzzyCompleter:
+def build_completer(commands: list[ChatCommand] | None = None) -> FuzzyCompleter:
     """
     Build a nested completer dynamically so 'use <dataset>' picks up new names.
     """
@@ -146,7 +28,7 @@ def build_completer(completer_helpers: list[CompleterHelper] | None = None) -> F
         "/librarian": {"show": None, },  # KTODO add librarian commands
     }
 
-    for helper in (completer_helpers or []):
+    for helper in (commands or []):
         data.update(helper.create_nested_dict())
 
     nested = NestedCompleter.from_nested_dict(data)
@@ -232,10 +114,10 @@ def run_remind_chat():
         ).switch_llm("gemma-3-1b")
 
     completer_helpers = [
-        ConfigsCH(),
-        SearchCH(),
-        ModelsCH(),
-        StatusCH(),
+        ConfigsCommand(),
+        SearchCommand(),
+        ModelsCommand(),
+        StatusCommand(),
     ]
     completer = build_completer(completer_helpers)
     # KTODO add assert to check command prefix not conflict
