@@ -106,11 +106,13 @@ class ChatSession:
 
         # save to config
         self.config['model_option_name'] = selected_option.name
+        self.save_config()
         return self
 
     def switch_device(self, device):
         self.config['device'] = device
-        re_mind_utils.set_global_device(device)
+        re_mind_utils.set_global_device(device)  # KTODO make it per rag_chat instance instead of global
+        self.save_config()
 
     def save_config(self):
         self.config_manager.save(self.config)
@@ -142,7 +144,9 @@ def run_remind_chat():
         cs = ChatSession(
             config=config,
             console=console,
-        ).switch_llm(config['model_option_name'])
+        )
+        cs.load_config()
+        cs.switch_llm(cs.config['model_option_name'])
 
     completer_helpers = [
         ConfigsCommand(),

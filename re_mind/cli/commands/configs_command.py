@@ -24,6 +24,7 @@ class ConfigsCommand(ChatCommand):
                     cs.print(f"[green]Configuration updated: device = {value}[/green]")
                 else:
                     cs.config[key] = type(cs.config.get(key, value))(value)
+                    cs.save_config()
 
         else:
             cs.print(Markdown("""```
