@@ -27,6 +27,32 @@ from re_mind.utils import re_mind_utils
 
 log = logging.getLogger(__name__)
 
+OUTPUT_MODE_DEBUGGING = 'debugging'
+OUTPUT_MODE_DETAIL = 'detail'
+OUTPUT_MODE_SIMPLE = 'simple'
+
+
+def print_response(cs, response: dict):
+    if cs.config.get('output_mode', OUTPUT_MODE_SIMPLE) in [OUTPUT_MODE_DEBUGGING, OUTPUT_MODE_DETAIL]:
+        extracted_queries = response.get("extracted_queries")
+        if extracted_queries:
+            cs.print(Markdown("# Extracted Queries"))
+            for i, query in enumerate(extracted_queries, 1):
+                cs.print(f"  {i}. {query}")
+            cs.print()
+
+        context = response.get("context", [])
+        if context:
+            cs.print(Markdown("# Source Documents"))
+            for i, doc in enumerate(context):
+                cs.print(f"    [{i + 1}] {doc.metadata}")
+                cs.print(Panel(doc.page_content, title=f"Document {i + 1}", expand=False))
+
+    output = Markdown(response['answer'])
+    output = Panel(output)
+    cs.print(output)
+
+
 DEFAULT_CONFIG = {
     # Chat
     'max_width': 100,
@@ -35,6 +61,7 @@ DEFAULT_CONFIG = {
     'temperature': 1.2,
     'n_top_result': 6,
     'model_option_name': 'gemma-3-1b',
+    'output_mode': OUTPUT_MODE_SIMPLE,
 
     # Hugging Face LLM
     'device': 'cuda',
@@ -163,7 +190,8 @@ def run_remind_chat():
     # Chat loop
     while True:
         try:
-            user_input = prompt_session.prompt(">  ", completer=completer)
+            prompt_message = f"[{cs.config.get('model_option_name', 'unknown')}][{cs.config.get('output_mode', OUTPUT_MODE_SIMPLE)}]>  "
+            user_input = prompt_session.prompt(prompt_message, completer=completer)
             if not user_input.strip():
                 continue
 
@@ -186,9 +214,7 @@ def run_remind_chat():
 
         cs.print(resp)
 
-        output = Markdown(resp['answer'])
-        output = Panel(output)
-        cs.print(output)
+        print_response(cs, resp)
 
 
 def main():
