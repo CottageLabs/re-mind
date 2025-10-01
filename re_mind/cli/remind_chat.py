@@ -45,13 +45,31 @@ def build_completer(commands: list[ChatCommand] | None = None) -> FuzzyCompleter
 
 @dataclass
 class ChatSession:
-    config: dict
-    console: rich.console.Console
+    config: dict = None
+    console: rich.console.Console = None
     rag_chat: RagChat = None
     model_option: ModelOption = None
 
     def __post_init__(self):
         self.config_manager = ConfigManager(cpaths.CONFIG_PATH)
+
+        if self.config is None:
+            self.config = self.config_manager.load()
+
+        if not self.config:
+            self.config = {
+                # Chat
+                'max_width': 100,
+
+                # RAG Session
+                'temperature': 1.2,
+                'n_top_result': 6,
+                'model_option_name': 'gemma-3-1b',
+
+                # Hugging Face LLM
+                'device': 'cuda',
+                'return_full_text': False,
+            }
 
     @property
     def llm(self):
@@ -125,27 +143,10 @@ class ChatSession:
 
 
 def run_remind_chat():
-    config = {
-        # Chat
-        'max_width': 100,
-
-        # RAG Session
-        'temperature': 1.2,
-        'n_top_result': 6,
-        'model_option_name': 'gemma-3-1b',
-
-        # Hugging Face LLM
-        'device': 'cuda',
-        'return_full_text': False,
-    }
     console = rich.console.Console()
     prompt_session = PromptSession()
     with console.status("Initializing RAG session..."):
-        cs = ChatSession(
-            config=config,
-            console=console,
-        )
-        cs.load_config()
+        cs = ChatSession(console=console)
         cs.switch_llm(cs.config['model_option_name'])
 
     completer_helpers = [
