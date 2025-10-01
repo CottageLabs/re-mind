@@ -9,7 +9,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from re_mind import cpaths
-from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand
+from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, ResetConfigCommand
 from re_mind.cli.components.model_options import ModelOption
 from re_mind.config_manager import ConfigManager
 from re_mind.rag.rag_chat import RagChat
@@ -26,6 +26,20 @@ from re_mind.utils import re_mind_utils
 # KTODO move device setting to rag_pipline state instead of global system
 
 log = logging.getLogger(__name__)
+
+DEFAULT_CONFIG = {
+    # Chat
+    'max_width': 100,
+
+    # RAG Session
+    'temperature': 1.2,
+    'n_top_result': 6,
+    'model_option_name': 'gemma-3-1b',
+
+    # Hugging Face LLM
+    'device': 'cuda',
+    'return_full_text': False,
+}
 
 
 def build_completer(commands: list[ChatCommand] | None = None) -> FuzzyCompleter:
@@ -57,19 +71,7 @@ class ChatSession:
             self.config = self.config_manager.load()
 
         if not self.config:
-            self.config = {
-                # Chat
-                'max_width': 100,
-
-                # RAG Session
-                'temperature': 1.2,
-                'n_top_result': 6,
-                'model_option_name': 'gemma-3-1b',
-
-                # Hugging Face LLM
-                'device': 'cuda',
-                'return_full_text': False,
-            }
+            self.config = DEFAULT_CONFIG.copy()
 
     @property
     def llm(self):
@@ -153,6 +155,7 @@ def run_remind_chat():
         ConfigsCommand(),
         SearchCommand(),
         ModelsCommand(),
+        ResetConfigCommand(),
     ]
     completer = build_completer(commands)
     # KTODO add assert to check command prefix not conflict
