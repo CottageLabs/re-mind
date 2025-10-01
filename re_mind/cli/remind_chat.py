@@ -149,12 +149,12 @@ def run_remind_chat():
         cs = ChatSession(console=console)
         cs.switch_llm(cs.config['model_option_name'])
 
-    completer_helpers = [
+    commands = [
         ConfigsCommand(),
         SearchCommand(),
         ModelsCommand(),
     ]
-    completer = build_completer(completer_helpers)
+    completer = build_completer(commands)
     # KTODO add assert to check command prefix not conflict
 
     # Chat loop
@@ -169,9 +169,9 @@ def run_remind_chat():
             break
 
         should_chat = True
-        for helper in completer_helpers:
-            if helper.is_match(user_input):
-                helper.run(user_input, cs)
+        for command in commands:
+            if command.is_match(user_input):
+                command.run(user_input, cs)
                 should_chat = False
                 break
 
@@ -180,6 +180,8 @@ def run_remind_chat():
 
         # with cs.console.status("Generating response..."):
         resp = cs.rag_chat.chat(user_input)
+
+        cs.print(resp)
 
         output = Markdown(resp['answer'])
         output = Panel(output)
