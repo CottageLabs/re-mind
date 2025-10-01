@@ -99,6 +99,8 @@ class ChatSession:
             llm = selected_option.create()
         self.rag_chat = RagChat(llm=llm, n_top_result=self.config.get('n_top_result', 8))
 
+        # save to config
+        self.config['model_option_name'] = selected_option.name
         return self
 
     def switch_device(self, device):
@@ -114,6 +116,7 @@ def run_remind_chat():
         # RAG Session
         'temperature': 1.2,
         'n_top_result': 6,
+        'model_option_name': 'gemma-3-1b',
 
         # Hugging Face LLM
         'device': 'cuda',
@@ -125,7 +128,7 @@ def run_remind_chat():
         cs = ChatSession(
             config=config,
             console=console,
-        ).switch_llm("gemma-3-1b")
+        ).switch_llm(config['model_option_name'])
 
     completer_helpers = [
         ConfigsCommand(),
