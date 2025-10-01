@@ -17,11 +17,12 @@ class ConfigManager:
         return self._config
 
     def save(self, config: dict[str, Any] | None = None) -> None:
+        if config is not None:
+            self._config = config
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(self._config, f, indent=2, ensure_ascii=False)
-            self._config = config
 
     @property
     def config(self) -> dict[str, Any]:
