@@ -13,12 +13,15 @@ from re_mind.cli.components.model_options import ModelOption
 from re_mind.rag.rag_chat import RagChat
 from re_mind.utils import re_mind_utils
 
+# KTODO output_model [debugging / detail / simple]
 # KTODO support librarian mode (list, add, remove documents)
-# KTODO support switch query mode
 # KTODO add command librarian
 # KTODO add history
-# KTODO add debugging / detail mode
-# KTODO output_model [debugging / detail / simple]
+# KTODO cut llm as backend server
+# KTODO support add prompt template
+# KTODO support sequence messages
+# KTODO support context window size management and auto summarization of chat history
+# KTODO move device setting to rag_pipline state instead of global system
 
 log = logging.getLogger(__name__)
 
@@ -79,9 +82,7 @@ class ChatSession:
             self.print(f"[red]Model option '{model_option_name}' not found.[/red]")
             raise ValueError(f"Model option '{model_option_name}' not found.")
 
-        if selected_option.name == (self.model_option.name if self.model_option else None):
-            # same model, do nothing
-            return self
+        selected_option.device = self.config.get('device', 'cuda')
 
         # delete previous model to free VRAM
         if self.model_option is not None:
@@ -94,11 +95,15 @@ class ChatSession:
         except torch.OutOfMemoryError:
             log.warning("OutOfMemoryError when loading model on GPU, retrying on CPU")
             selected_option.device = 'cpu'
-            re_mind_utils.set_global_device('cpu')
+            self.switch_device('cpu')
             llm = selected_option.create()
         self.rag_chat = RagChat(llm=llm, n_top_result=self.config.get('n_top_result', 8))
 
         return self
+
+    def switch_device(self, device):
+        self.config['device'] = device
+        re_mind_utils.set_global_device(device)
 
 
 def run_remind_chat():
