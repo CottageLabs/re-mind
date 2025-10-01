@@ -8,8 +8,10 @@ from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from re_mind import cpaths
 from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand
 from re_mind.cli.components.model_options import ModelOption
+from re_mind.config_manager import ConfigManager
 from re_mind.rag.rag_chat import RagChat
 from re_mind.utils import re_mind_utils
 
@@ -47,6 +49,9 @@ class ChatSession:
     console: rich.console.Console
     rag_chat: RagChat = None
     model_option: ModelOption = None
+
+    def __post_init__(self):
+        self.config_manager = ConfigManager(cpaths.CONFIG_PATH)
 
     @property
     def llm(self):
@@ -106,6 +111,15 @@ class ChatSession:
     def switch_device(self, device):
         self.config['device'] = device
         re_mind_utils.set_global_device(device)
+
+    def save_config(self):
+        self.config_manager.save(self.config)
+
+    def load_config(self) -> dict:
+        loaded_config = self.config_manager.load()
+        if loaded_config:
+            self.config.update(loaded_config)
+        return self.config
 
 
 def run_remind_chat():
