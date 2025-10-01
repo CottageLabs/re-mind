@@ -8,7 +8,7 @@ from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, StatusCommand
+from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand
 from re_mind.cli.components.model_options import ModelOption
 from re_mind.rag.rag_chat import RagChat
 from re_mind.utils import re_mind_utils
@@ -131,7 +131,6 @@ def run_remind_chat():
         ConfigsCommand(),
         SearchCommand(),
         ModelsCommand(),
-        StatusCommand(),
     ]
     completer = build_completer(completer_helpers)
     # KTODO add assert to check command prefix not conflict
