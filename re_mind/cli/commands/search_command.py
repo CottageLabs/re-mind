@@ -1,5 +1,5 @@
-from rich.markdown import Markdown
 from re_mind import retrievers
+from re_mind.cli.chat_session_utils import print_search_results
 from .chat_command_base import ChatCommand
 from .command_utils import extract_command_arg
 
@@ -16,25 +16,4 @@ class SearchCommand(ChatCommand):
             return
 
         docs, extracted_queries = retrievers.complex_retrieve(query, cs.llm, cs.config['n_top_result'])
-
-        cs.print(Markdown("## Search Results"))
-        cs.print(Markdown(f"**Query:** {query}"))
-        cs.print()
-
-        if extracted_queries:
-            queries_text = "### Extracted Queries\n" \
-                           + "\n".join(f"{i}. {eq}" for i, eq in enumerate(extracted_queries, 1))
-            cs.print(Markdown(queries_text))
-            cs.print()
-
-        cs.print(Markdown(f"### Documents ({len(docs)} found)"))
-        for i, doc in enumerate(docs, 1):
-            content = doc.page_content[:400] + "..." if len(doc.page_content) > 400 else doc.page_content
-            source = doc.metadata.get('source', 'Unknown')
-            page = doc.metadata.get('page', '')
-            score = doc.metadata.get('ranker_score', 0)
-
-            cs.print(Markdown(f"**{i}.** Score: {score:.2f}"))
-            cs.print(Markdown(f"   **Source:** {source}" + (f" (page {page})" if page else "")))
-            cs.print(Markdown(f"   **Content:** {content}"))
-            cs.print()
+        print_search_results(cs, query, docs, extracted_queries)

@@ -5,17 +5,19 @@ import rich
 import torch
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
-from rich.markdown import Markdown
-from rich.panel import Panel
 
 from re_mind import cpaths
+from re_mind.cli.chat_session_utils import (
+    print_response,
+    OUTPUT_MODE_SIMPLE,
+)
 from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, ResetConfigCommand
 from re_mind.cli.components.model_options import ModelOption
 from re_mind.config_manager import ConfigManager
 from re_mind.rag.rag_chat import RagChat
 from re_mind.utils import re_mind_utils
 
-# KTODO output_model [debugging / detail / simple]
+# KTODO output_model [debug / detail / simple]
 # KTODO support librarian mode (list, add, remove documents)
 # KTODO add command librarian
 # KTODO add history
@@ -26,31 +28,6 @@ from re_mind.utils import re_mind_utils
 # KTODO move device setting to rag_pipline state instead of global system
 
 log = logging.getLogger(__name__)
-
-OUTPUT_MODE_DEBUGGING = 'debugging'
-OUTPUT_MODE_DETAIL = 'detail'
-OUTPUT_MODE_SIMPLE = 'simple'
-
-
-def print_response(cs, response: dict):
-    if cs.config.get('output_mode', OUTPUT_MODE_SIMPLE) in [OUTPUT_MODE_DEBUGGING, OUTPUT_MODE_DETAIL]:
-        extracted_queries = response.get("extracted_queries")
-        if extracted_queries:
-            cs.print(Markdown("# Extracted Queries"))
-            for i, query in enumerate(extracted_queries, 1):
-                cs.print(f"  {i}. {query}")
-            cs.print()
-
-        context = response.get("context", [])
-        if context:
-            cs.print(Markdown("# Source Documents"))
-            for i, doc in enumerate(context):
-                cs.print(f"    [{i + 1}] {doc.metadata}")
-                cs.print(Panel(doc.page_content, title=f"Document {i + 1}", expand=False))
-
-    output = Markdown(response['answer'])
-    output = Panel(output)
-    cs.print(output)
 
 
 DEFAULT_CONFIG = {
@@ -211,8 +188,6 @@ def run_remind_chat():
 
         # with cs.console.status("Generating response..."):
         resp = cs.rag_chat.chat(user_input)
-
-        cs.print(resp)
 
         print_response(cs, resp)
 
