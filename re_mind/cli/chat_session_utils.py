@@ -15,6 +15,21 @@ OUTPUT_MODE_DETAIL = 'detail'
 OUTPUT_MODE_DEBUG = 'debug'
 
 
+def get_prompt_message(cs: 'ChatSession') -> str:
+    from re_mind.cli.components.model_options import HuggingFaceModelOption
+
+    model_name = cs.config.get('model_option_name', 'unknown')
+    output_mode = cs.config.get('output_mode', OUTPUT_MODE_SIMPLE)
+
+    if isinstance(cs.model_option, HuggingFaceModelOption):
+        device_display = ''
+        if device:= cs.config.get('device', None):
+            device_display = ' ({})'.format(device)
+        return "[{model}{device}][{mode}]>  ".format(model=model_name, device=device_display, mode=output_mode)
+
+    return "[{model}][{mode}]>  ".format(model=model_name, mode=output_mode)
+
+
 def print_response(cs: 'ChatSession', response: dict):
     output_mode = cs.config.get('output_mode', OUTPUT_MODE_SIMPLE)
     if output_mode == OUTPUT_MODE_DEBUG:

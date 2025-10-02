@@ -9,6 +9,7 @@ from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 from re_mind import cpaths
 from re_mind.cli.chat_session_utils import (
     print_response,
+    get_prompt_message,
     OUTPUT_MODE_SIMPLE,
 )
 from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, ResetConfigCommand
@@ -167,7 +168,7 @@ def run_remind_chat():
     # Chat loop
     while True:
         try:
-            prompt_message = f"[{cs.config.get('model_option_name', 'unknown')}][{cs.config.get('output_mode', OUTPUT_MODE_SIMPLE)}]>  "
+            prompt_message = get_prompt_message(cs)
             user_input = prompt_session.prompt(prompt_message, completer=completer)
             if not user_input.strip():
                 continue
