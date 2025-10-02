@@ -18,7 +18,6 @@ from re_mind.config_manager import ConfigManager
 from re_mind.rag.rag_chat import RagChat
 from re_mind.utils import re_mind_utils
 
-# KTODO output_model [debug / detail / simple]
 # KTODO support librarian mode (list, add, remove documents)
 # KTODO add command librarian
 # KTODO add history
@@ -27,9 +26,9 @@ from re_mind.utils import re_mind_utils
 # KTODO support sequence messages
 # KTODO support context window size management and auto summarization of chat history
 # KTODO move device setting to rag_pipline state instead of global system
+# KTODO support switch vector store
 
 log = logging.getLogger(__name__)
-
 
 DEFAULT_CONFIG = {
     # Chat

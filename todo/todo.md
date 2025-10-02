@@ -32,3 +32,4 @@
 ## Remin Chat
 - [x] support search only mode 
 - [x] support switch llm
+- [x] output_mode [debug / detail / simple]
