@@ -42,7 +42,7 @@ def print_response(cs: 'ChatSession', response: dict):
             cs.print(Markdown("# Source Documents"))
             for i, doc in enumerate(context):
                 cs.print(f"    [{i + 1}] {doc.metadata}")
-                cs.print(Panel(doc.page_content, title=f"Document {i + 1}", expand=False))
+                cs.print(Panel(doc.page_content, title=f"Document {i + 1}", expand=True))
 
         if extracted_queries:
             cs.print(Markdown("# Extracted Queries"))
@@ -83,8 +83,7 @@ def print_search_results(cs: 'ChatSession', query: str, docs: list, extracted_qu
         page = doc.metadata.get('page', '')
         score = doc.metadata.get('ranker_score', 0)
 
-        cs.print(Markdown(f"**{i}.** Score: {score:.2f}"))
-        cs.print(Markdown(f"   **Source:** {source}" + (f" (page {page})" if page else "")))
-        cs.print(Markdown(f"   **Content:** {content}"))
-        cs.print()
+        title = f"{i}. {source}" + (f" (page {page})" if page else "") + f" (Score: {score:.2f})"
+        cs.print(Markdown(f"## {title}"))
+        cs.print(Panel(content, expand=True))
 
