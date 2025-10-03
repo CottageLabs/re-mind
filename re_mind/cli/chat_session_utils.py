@@ -70,6 +70,12 @@ def print_search_results(cs: 'ChatSession', query: str, docs: list, extracted_qu
     cs.print(Markdown(f"**Query:** {query}"))
     cs.print()
 
+    if extracted_queries:
+        queries_text = "### Extracted Queries\n" \
+                       + "\n".join(f"{i}. {eq}" for i, eq in enumerate(extracted_queries, 1))
+        cs.print(Markdown(queries_text))
+        cs.print()
+
     cs.print(Markdown(f"### Documents ({len(docs)} found)"))
     for i, doc in enumerate(docs, 1):
         content = doc.page_content[:400] + "..." if len(doc.page_content) > 400 else doc.page_content
@@ -82,8 +88,3 @@ def print_search_results(cs: 'ChatSession', query: str, docs: list, extracted_qu
         cs.print(Markdown(f"   **Content:** {content}"))
         cs.print()
 
-    if extracted_queries:
-        queries_text = "### Extracted Queries\n" \
-                       + "\n".join(f"{i}. {eq}" for i, eq in enumerate(extracted_queries, 1))
-        cs.print(Markdown(queries_text))
-        cs.print()
