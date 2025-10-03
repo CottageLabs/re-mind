@@ -1,4 +1,4 @@
-from re_mind import retrievers
+from re_mind import retrievers, components
 from re_mind.cli.chat_session_utils import print_search_results
 from .chat_command_base import ChatCommand
 from .command_utils import extract_command_arg
@@ -15,5 +15,6 @@ class SearchCommand(ChatCommand):
             cs.print("Example: /search What is the capital of France?")
             return
 
-        docs, extracted_queries = retrievers.complex_retrieve(query, cs.llm, cs.config['n_top_result'])
+        vectorstore = components.get_vector_store()
+        docs, extracted_queries = retrievers.complex_retrieve(query, vectorstore, cs.llm, cs.config['n_top_result'])
         print_search_results(cs, query, docs, extracted_queries)
