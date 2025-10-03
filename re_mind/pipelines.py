@@ -224,6 +224,7 @@ class RagState(TypedDict):
     extracted_queries: List[str] | None
     vectorstore: Any
     device: str
+    llm: Any
     # KTODO add user's system instructions
 
 
@@ -252,7 +253,8 @@ def build_rag_app(
     def init_state(state: RagState):
         device = state.get('device') or 'cpu'
         vectorstore = state.get('vectorstore') or components.get_vector_store(device=device)
-        return {'device': device, 'vectorstore': vectorstore}
+        llm_instance = state.get('llm') or llm
+        return {'device': device, 'vectorstore': vectorstore, 'llm': llm_instance}
 
     # Prefer not to mutate the incoming retriever; use a k-override if supported.
     def route_retriever(state: RagState):
@@ -275,7 +277,7 @@ def build_rag_app(
         return {"context": docs}
 
     def complex_retrieve(state: RagState):
-        docs, extracted_queries = retrievers.complex_retrieve(state["question"], state["vectorstore"], llm, n_top_result)
+        docs, extracted_queries = retrievers.complex_retrieve(state["question"], state["vectorstore"], state["llm"], n_top_result)
         return {"context": docs, "extracted_queries": extracted_queries}
 
     def synthesize(state: RagState):
@@ -290,7 +292,7 @@ def build_rag_app(
 
         prompt = lc_prompts.format_rag_prompt(instruction, context_text, state['question'])
 
-        ai_msg = llm.invoke(prompt)
+        ai_msg = state['llm'].invoke(prompt)
         answer = ai_msg.content
 
         # Simple sources footer using chosen metadata keys
