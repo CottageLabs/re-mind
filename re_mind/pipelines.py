@@ -222,6 +222,8 @@ class RagState(TypedDict):
     answer: str
     query_model: Literal['quick', 'rerank', 'complex']
     extracted_queries: List[str] | None
+    # KTODO add vectorstore
+    # KTODO add device
 
 
 def build_rag_app(

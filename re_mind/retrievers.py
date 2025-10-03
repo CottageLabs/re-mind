@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def quick_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
+    # KTODO vectorstore as param
     vectorstore = components.get_vector_store()
     quick_retriever = vectorstore.as_retriever(
         search_type="mmr",
@@ -20,6 +21,7 @@ def quick_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
 
 
 def rerank_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
+    # KTODO vectorstore as param
     vectorstore = components.get_vector_store()
     rerank_retriever = vectorstore.as_retriever(
         search_type="similarity",
@@ -31,6 +33,7 @@ def rerank_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
 
 
 def complex_retrieve(question: str, llm, n_top_result: int = 8) -> tuple[List[Document], List[str]]:
+    # KTODO vectorstore as param
     vectorstore = components.get_vector_store()
     multi_query_retriever = vectorstore.as_retriever(
         search_type="similarity",
