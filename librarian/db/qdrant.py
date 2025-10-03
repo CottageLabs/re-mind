@@ -2,8 +2,8 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 
-from re_mind.constants import DEFAULT_COLLECTION_NAME
-from re_mind.cpaths import QDRANT_DATA_PATH
+from librarian.constants import DEFAULT_COLLECTION_NAME
+from librarian.cpaths import QDRANT_DATA_PATH
 from librarian.embedding import get_embedding
 
 
@@ -18,11 +18,12 @@ def get_client(location=None, **kwargs):
     return qdrant
 
 
-def get_vector_store(client=None, collection_name=DEFAULT_COLLECTION_NAME):
+def get_vector_store(client=None, collection_name=DEFAULT_COLLECTION_NAME, device='cpu'):
+    # KTODO use device on all caller
     if client is None:
         client = get_client()
 
-    embedding = get_embedding()
+    embedding = get_embedding(device=device)
     init_collection(embedding._client.get_sentence_embedding_dimension(),
                     client=client, collection_name=collection_name)
     vector_store = QdrantVectorStore(

@@ -1,13 +1,12 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from re_mind.constants import DEFAULT_EMBEDDING
-from re_mind.utils.re_mind_utils import get_global_device
+from librarian.constants import DEFAULT_EMBEDDING
 
 
-def get_embedding():
+def get_embedding(device='cpu'):
     embedding = HuggingFaceEmbeddings(
         model_name=DEFAULT_EMBEDDING,
-        model_kwargs={"device": get_global_device()}
+        model_kwargs={"device": device}
     )
     return embedding
 
@@ -67,7 +66,6 @@ I can give you a **dynamic collection creator** that reads sizes for all your mo
 
 
 def main():
-    llm_utils.set_global_device('cpu')
     size = get_embedding_size(get_embedding())
     print(f"Embedding size: {size}")
 

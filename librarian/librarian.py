@@ -1,7 +1,7 @@
 import hashlib
 from pathlib import Path
 
-from re_mind import components
+from librarian import components
 from librarian import text_processing
 from librarian.constants import MAX_FILE_SIZE_BYTES
 from librarian.dao.base_dao import BaseDao

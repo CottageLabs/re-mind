@@ -9,8 +9,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from re_mind import components
-from re_mind.utils import iter_utils
+from librarian import components
+from librarian import iter_utils
 
 
 def create_text_splitter():
