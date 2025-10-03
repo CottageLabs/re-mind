@@ -32,9 +32,9 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["re_mind*"]
+include = ["re_mind*", "librarian*"]
 
 
 [project.scripts]
 remind-chat = "re_mind.cli.remind_chat:main"
-re-mind = "re_mind.cli.re_mind_cli:main"
+librarian = "librarian.librarian_cli:main"
