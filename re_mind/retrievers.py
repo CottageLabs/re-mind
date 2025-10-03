@@ -1,18 +1,17 @@
+import logging
 from typing import List
 
 from langchain_core.documents import Document
 
-from re_mind import components, llm_tasks
+from re_mind import llm_tasks
 from re_mind.llm_tasks import retrieve_and_deduplicate_docs
 from re_mind.rankers import rerankers
 from re_mind.rankers.rerankers import rerank_with_qa_ranker, BGEQARanker
-import logging
+
 log = logging.getLogger(__name__)
 
 
-def quick_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
-    # KTODO vectorstore as param
-    vectorstore = components.get_vector_store()
+def quick_retrieve(question: str, vectorstore, n_top_result: int = 8) -> List[Document]:
     quick_retriever = vectorstore.as_retriever(
         search_type="mmr",
         search_kwargs={"k": n_top_result, "fetch_k": n_top_result + 40, "lambda_mult": 0.5},
@@ -20,9 +19,7 @@ def quick_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
     return quick_retriever.invoke(question)
 
 
-def rerank_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
-    # KTODO vectorstore as param
-    vectorstore = components.get_vector_store()
+def rerank_retrieve(question: str, vectorstore, n_top_result: int = 8) -> List[Document]:
     rerank_retriever = vectorstore.as_retriever(
         search_type="similarity",
         search_kwargs={"k": n_top_result + 20}
@@ -32,9 +29,7 @@ def rerank_retrieve(question: str, n_top_result: int = 8) -> List[Document]:
     return rerank_with_qa_ranker(question, docs, ranker, top_m=n_top_result)
 
 
-def complex_retrieve(question: str, llm, n_top_result: int = 8) -> tuple[List[Document], List[str]]:
-    # KTODO vectorstore as param
-    vectorstore = components.get_vector_store()
+def complex_retrieve(question: str, vectorstore, llm, n_top_result: int = 8) -> tuple[List[Document], List[str]]:
     multi_query_retriever = vectorstore.as_retriever(
         search_type="similarity",
         search_kwargs={"k": n_top_result + 20}

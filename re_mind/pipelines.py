@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Tuple, Literal
+from typing import TypedDict, List, Tuple, Literal, Any
 
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -220,10 +220,11 @@ class RagState(TypedDict):
     question: str
     context: List[Document]
     answer: str
-    query_model: Literal['quick', 'rerank', 'complex']
+    query_model: Literal['quick', 'rerank', 'complex']  # KTODO rename query_mode
     extracted_queries: List[str] | None
-    # KTODO add vectorstore
-    # KTODO add device
+    vectorstore: Any
+    device: str
+    # KTODO add user's system instructions
 
 
 def build_rag_app(
@@ -248,6 +249,11 @@ def build_rag_app(
         {"question": ..., "context": List[Document], "answer": str}
     """
 
+    def init_state(state: RagState):
+        device = state.get('device') or 'cpu'
+        vectorstore = state.get('vectorstore') or components.get_vector_store(device=device)
+        return {'device': device, 'vectorstore': vectorstore}
+
     # Prefer not to mutate the incoming retriever; use a k-override if supported.
     def route_retriever(state: RagState):
         query_model = state.get("query_model", 'complex')
@@ -259,15 +265,17 @@ def build_rag_app(
             return "complex_retrieve"
 
     def quick_retrieve(state: RagState):
-        docs: List[Document] = retrievers.quick_retrieve(state["question"], n_top_result)
+        docs: List[Document] = retrievers.quick_retrieve(
+            state["question"], state["vectorstore"], n_top_result
+        )
         return {"context": docs}
 
     def rerank_retrieve(state: RagState):
-        docs = retrievers.rerank_retrieve(state["question"], n_top_result)
+        docs = retrievers.rerank_retrieve(state["question"], state["vectorstore"], n_top_result)
         return {"context": docs}
 
     def complex_retrieve(state: RagState):
-        docs, extracted_queries = retrievers.complex_retrieve(state["question"], llm, n_top_result)
+        docs, extracted_queries = retrievers.complex_retrieve(state["question"], state["vectorstore"], llm, n_top_result)
         return {"context": docs, "extracted_queries": extracted_queries}
 
     def synthesize(state: RagState):
@@ -298,13 +306,15 @@ def build_rag_app(
         return {"answer": answer}
 
     g = StateGraph(RagState)
+    g.add_node('init_state', init_state)
     g.add_node("quick_retrieve", quick_retrieve)
     g.add_node("rerank_retrieve", rerank_retrieve)
     g.add_node("complex_retrieve", complex_retrieve)
     g.add_node("synthesize", synthesize)
 
-    # Conditional routing from START based on use_reranker flag
-    g.add_conditional_edges(START, route_retriever, {
+    # Edges
+    g.add_edge(START, 'init_state')
+    g.add_conditional_edges('init_state', route_retriever, {
         "quick_retrieve": "quick_retrieve",
         "rerank_retrieve": "rerank_retrieve",
         "complex_retrieve": "complex_retrieve",
