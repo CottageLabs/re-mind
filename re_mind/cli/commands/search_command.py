@@ -16,5 +16,6 @@ class SearchCommand(ChatCommand):
             return
 
         vectorstore = components.get_vector_store()
-        docs, extracted_queries = retrievers.complex_retrieve(query, vectorstore, cs.llm, cs.config['n_top_result'])
+        docs, extracted_queries = retrievers.complex_retrieve(query, vectorstore, cs.llm, cs.config['n_top_result'],
+                                                              device=cs.config.get('device'))
         print_search_results(cs, query, docs, extracted_queries)

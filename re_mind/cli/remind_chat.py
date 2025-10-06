@@ -126,7 +126,16 @@ class ChatSession:
             selected_option.device = 'cpu'
             self.switch_device('cpu')
             llm = selected_option.create()
-        self.rag_chat = RagChat(llm=llm, n_top_result=self.config.get('n_top_result', 8))
+        if self.rag_chat is None:
+            self.rag_chat = RagChat(
+                llm=llm,
+                n_top_result=self.config.get('n_top_result', 8),
+                device=self.config.get('device', 'cpu'),
+            )
+        else:
+            self.rag_chat.llm = llm
+            self.rag_chat.device = self.config.get('device', 'cpu')
+
 
         # save to config
         self.config['model_option_name'] = selected_option.name
