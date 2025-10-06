@@ -46,7 +46,7 @@ class BGEQARanker(QARanker):
         self.batch_size = batch_size
         self._reranker = FlagReranker(model,
                                       use_fp16=self.device != 'cpu',
-                                      device=self.device)
+                                      devices=self.device)
 
     def rank(self, pairs: list[tuple[str, str]]) -> list[float]:
         formatted_pairs = [[query, passage] for query, passage in pairs]
