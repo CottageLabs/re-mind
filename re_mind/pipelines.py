@@ -5,7 +5,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnablePassthrough, RunnableConfig
 from langchain_core.tools import tool
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
@@ -222,9 +222,6 @@ class RagState(TypedDict):
     answer: str
     query_model: Literal['quick', 'rerank', 'complex']  # KTODO rename query_mode
     extracted_queries: List[str] | None
-    vectorstore: Any
-    device: str
-    llm: Any
     # KTODO add user's system instructions
 
 
@@ -241,7 +238,6 @@ def build_rag_app(
 
     Args:
         llm: Any tool-less chat model that supports .invoke(prompt).content.
-        vectorstore: Optional LangChain vectorstore used to build the retriever.
         n_top_result: Number of top documents to retrieve via MMR.
         cite_metadata_keys: Metadata keys to surface in the 'Sources' footer.
         instruction: Guidance added to the synthesis prompt.
@@ -249,12 +245,6 @@ def build_rag_app(
     Returns:
         {"question": ..., "context": List[Document], "answer": str}
     """
-
-    def init_state(state: RagState):
-        device = state.get('device') or 'cpu'
-        vectorstore = state.get('vectorstore') or components.get_vector_store(device=device)
-        llm_instance = state.get('llm') or llm
-        return {'device': device, 'vectorstore': vectorstore, 'llm': llm_instance}
 
     # Prefer not to mutate the incoming retriever; use a k-override if supported.
     def route_retriever(state: RagState):
@@ -266,21 +256,29 @@ def build_rag_app(
         else:
             return "complex_retrieve"
 
-    def quick_retrieve(state: RagState):
+    def quick_retrieve(state: RagState, config: RunnableConfig):
+        vectorstore = config["configurable"]["vectorstore"]
         docs: List[Document] = retrievers.quick_retrieve(
-            state["question"], state["vectorstore"], n_top_result
+            state["question"], vectorstore, n_top_result
         )
         return {"context": docs}
 
-    def rerank_retrieve(state: RagState):
-        docs = retrievers.rerank_retrieve(state["question"], state["vectorstore"], n_top_result)
+    def rerank_retrieve(state: RagState, config: RunnableConfig):
+        vectorstore = config["configurable"]["vectorstore"]
+        device = config["configurable"].get("device")
+        docs = retrievers.rerank_retrieve(state["question"], vectorstore, n_top_result, device=device)
         return {"context": docs}
 
-    def complex_retrieve(state: RagState):
-        docs, extracted_queries = retrievers.complex_retrieve(state["question"], state["vectorstore"], state["llm"], n_top_result)
+    def complex_retrieve(state: RagState, config: RunnableConfig):
+        vectorstore = config["configurable"]["vectorstore"]
+        llm_instance = config["configurable"]["llm"]
+        device = config["configurable"].get('device')
+
+        docs, extracted_queries = retrievers.complex_retrieve(state["question"], vectorstore, llm_instance,
+                                                              n_top_result, device=device)
         return {"context": docs, "extracted_queries": extracted_queries}
 
-    def synthesize(state: RagState):
+    def synthesize(state: RagState, config: RunnableConfig):
         docs: List[Document] = state.get("context", [])
         if docs:
             ctx_blocks = []
@@ -292,7 +290,8 @@ def build_rag_app(
 
         prompt = lc_prompts.format_rag_prompt(instruction, context_text, state['question'])
 
-        ai_msg = state['llm'].invoke(prompt)
+        llm_instance = config["configurable"]["llm"]
+        ai_msg = llm_instance.invoke(prompt)
         answer = ai_msg.content
 
         # Simple sources footer using chosen metadata keys
@@ -308,15 +307,13 @@ def build_rag_app(
         return {"answer": answer}
 
     g = StateGraph(RagState)
-    g.add_node('init_state', init_state)
     g.add_node("quick_retrieve", quick_retrieve)
     g.add_node("rerank_retrieve", rerank_retrieve)
     g.add_node("complex_retrieve", complex_retrieve)
     g.add_node("synthesize", synthesize)
 
     # Edges
-    g.add_edge(START, 'init_state')
-    g.add_conditional_edges('init_state', route_retriever, {
+    g.add_conditional_edges(START, route_retriever, {
         "quick_retrieve": "quick_retrieve",
         "rerank_retrieve": "rerank_retrieve",
         "complex_retrieve": "complex_retrieve",
@@ -327,8 +324,16 @@ def build_rag_app(
     g.add_edge("complex_retrieve", "synthesize")
 
     g.add_edge("synthesize", END)
-    # g.add_conditional_edges("synthesize", route_output, {"print_result": "print_result", END: END})
-    # g.add_edge("print_result", END)
 
     app = g.compile()
+
+    # Set default config for llm, device, and vectorstore
+    app = app.with_config({
+        "configurable": {
+            "llm": llm,
+            "device": "cpu",
+            # KTODO make pipeline support vectorstore=None
+        }
+    })
+
     return app
