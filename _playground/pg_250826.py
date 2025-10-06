@@ -10,7 +10,7 @@ from rich.rule import Rule
 
 from re_mind import components, pipelines
 from librarian.db.qdrant import get_client
-from re_mind.language_models import create_llm_huggingface
+from re_mind.language_models import create_llm_huggingface, create_openai_model
 from re_mind.llm_tasks import extract_queries_from_input, retrieve_and_deduplicate_docs
 from re_mind.pipelines import build_rag_app
 from re_mind.rag.rag_chat import RagChat
@@ -522,6 +522,52 @@ def main15():
     x = c.chat('what is reinforcement learning')
     print(x)
 
+
+def main16():
+    """Test complex_retrieve function."""
+    from re_mind import retrievers
+
+    device = 'cpu'
+    llm_utils.set_global_device(device)
+
+    # Choose your LLM
+    # llm = create_llm_huggingface(device=device, model_id="google/gemma-3-1b-it", temperature=0.2)
+    llm = create_openai_model()
+
+    vectorstore = components.get_vector_store()
+
+    test_questions = [
+        "What are the main concepts in reinforcement learning?",
+        "Explain neural network architectures",
+    ]
+
+    console = Console()
+
+    for question in test_questions:
+        console.print(f"\n[bold blue]Question:[/bold blue] {question}")
+        console.print(Rule(style="dim"))
+
+        result_docs, extracted_queries = retrievers.complex_retrieve(
+            question=question,
+            vectorstore=vectorstore,
+            llm=llm,
+            n_top_result=8,
+            device=device
+        )
+
+        console.print("[bold green]Extracted Queries:[/bold green]")
+        for i, q in enumerate(extracted_queries, 1):
+            console.print(f"  {i}. {q}")
+
+        console.print(f"\n[bold yellow]Retrieved {len(result_docs)} documents:[/bold yellow]")
+        for i, doc in enumerate(result_docs, 1):
+            score = doc.metadata.get('ranker_score', 0)
+            console.print(f"\n[bold]{i}. Score: {score:.4f}[/bold]")
+            console.print(f"{doc.page_content[:300]}...")
+            console.print(f"[dim]Source: {doc.metadata.get('source', 'Unknown')} | Page: {doc.metadata.get('page', 'N/A')}[/dim]")
+
+        console.print("\n" + "="*80 + "\n")
+
 if __name__ == "__main__":
     # main7__load_pdf()
     # main5__test_rqg_qa()
@@ -530,6 +576,7 @@ if __name__ == "__main__":
     # main8__test_rqg_qa()
     # main9__try_demo_graph()
     # main11__hugging_face_tools()
-    main12__try_rqg_graph()
+    # main12__try_rqg_graph()
     # main15()
     # main14__test_query_extraction_prompt()
+    main16()
