@@ -1,12 +1,16 @@
 from langchain.chains import LLMChain
 
-from re_mind import pipelines
+from re_mind import pipelines, components
+
 
 class RagChat:
 
-    def __init__(self, llm, n_top_result=8):
+    # KTODO rename all vectorstore to vector_store
+    def __init__(self, llm, vectorstore=None, n_top_result=8, device='cpu'):
         self.llm = llm
-        self.rag_chain = pipelines.build_rag_app(llm, n_top_result=n_top_result, )
+        self.vectorstore = vectorstore or components.get_vector_store()
+        self.rag_chain = pipelines.build_rag_app(llm,  n_top_result=n_top_result, )
+        self.device = device
 
     @classmethod
     def create_by_huggingface(cls, temperature=1.2, n_top_result=8, device=None, return_full_text=False):
@@ -41,8 +45,13 @@ class RagChat:
 
     def chat(self, user_input, **kwargs):
         response = self.rag_chain.invoke(
-            {
-                'question': user_input
-            }
+            {'question': user_input},
+            config={'configurable': {
+                'llm': self.llm,
+                'vectorstore': self.vectorstore,
+                'device': self.device,
+                # KTODO handle n_top_result, temperature, etc.
+            }}
+
         )
         return response
