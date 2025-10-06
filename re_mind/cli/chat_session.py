@@ -1,13 +1,13 @@
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 import rich
 import torch
 
-from re_mind import cpaths
+from re_mind import cpaths, pipelines, components
 from re_mind.cli.chat_session_utils import OUTPUT_MODE_SIMPLE
 from re_mind.config_manager import ConfigManager
-from re_mind.rag.rag_chat import RagChat
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,10 @@ DEFAULT_CONFIG = {
 class ChatSession:
     config: dict = None
     console: rich.console.Console = None
-    rag_chat: RagChat = None
+    llm: 'Any' = None
+    vectorstore: 'Any' = None
+    rag_chain: 'CompiledStateGraph' = None
+    device: str = None
     model_option: 'ModelOption' = None
 
     def __post_init__(self):
@@ -42,10 +45,6 @@ class ChatSession:
 
         if not self.config:
             self.config = DEFAULT_CONFIG.copy()
-
-    @property
-    def llm(self):
-        return self.rag_chat.llm if self.rag_chat else None
 
     @property
     def console_width(self):
@@ -92,14 +91,15 @@ class ChatSession:
             selected_option.device = 'cpu'
             self.switch_device('cpu')
             llm = selected_option.create()
-        if self.rag_chat is None:
+
+        if self.llm is None:
             # KTODO support switch vector store
-            self.rag_chat = RagChat(llm=llm,
-                                    device=self.config.get('device', 'cpu'),
-                                    config=self.config)
-        else:
-            self.rag_chat.llm = llm
-            self.rag_chat.device = self.config.get('device', 'cpu')
+            self.vectorstore = self.config.get('vectorstore') or components.get_vector_store()
+            n_top_result = self.config.get('n_top_result', 8)
+            self.rag_chain = pipelines.build_rag_app(llm, n_top_result=n_top_result)
+
+        self.llm = llm
+        self.device = self.config.get('device', 'cpu')
 
         # save to config
         self.config['model_option_name'] = selected_option.name
@@ -118,3 +118,22 @@ class ChatSession:
         if loaded_config:
             self.config.update(loaded_config)
         return self.config
+
+    def chat(self, user_input,
+             state: dict = None,
+             configurable: dict = None):
+        state = state or {}
+        configurable = configurable or {}
+
+        final_state = {'question': user_input} | state
+        final_configurable = {
+                                 'llm': self.llm,
+                                 'vectorstore': self.vectorstore,
+                                 'device': self.device,
+                                 # KTODO handle n_top_result, temperature, etc.
+                             } | configurable
+        response = self.rag_chain.invoke(
+            final_state,
+            config={'configurable': final_configurable }
+        )
+        return response

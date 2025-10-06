@@ -78,7 +78,7 @@ def run_remind_chat():
             continue
 
         # with cs.console.status("Generating response..."):
-        resp = cs.rag_chat.chat(user_input)
+        resp = cs.chat(user_input)
 
         print_response(cs, resp)
 
