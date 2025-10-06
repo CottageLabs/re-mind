@@ -93,11 +93,10 @@ class ChatSession:
             self.switch_device('cpu')
             llm = selected_option.create()
         if self.rag_chat is None:
-            self.rag_chat = RagChat(
-                llm=llm,
-                n_top_result=self.config.get('n_top_result', 8),
-                device=self.config.get('device', 'cpu'),
-            )
+            # KTODO support switch vector store
+            self.rag_chat = RagChat(llm=llm,
+                                    device=self.config.get('device', 'cpu'),
+                                    config=self.config)
         else:
             self.rag_chat.llm = llm
             self.rag_chat.device = self.config.get('device', 'cpu')
