@@ -12,3 +12,8 @@ def get_global_device():
 def set_global_device(device: str):
     os.environ['LMT_DEVICE'] = device
     return device
+
+
+
+def get_sys_device():
+    return "cuda" if torch.cuda.is_available() else "cpu"
