@@ -18,7 +18,7 @@ class RagChat:
         from re_mind.utils import re_mind_utils as llm_utils
 
         if device is None:
-            device = llm_utils.get_global_device()
+            device = llm_utils.get_sys_device()
         llm_utils.set_global_device(device)
 
         # llm = components.get_llm()

@@ -37,7 +37,7 @@ class HuggingFaceModelOption(ModelOption):
 
         device = self.device
         if device is None:
-            device = llm_utils.get_global_device()
+            device = llm_utils.get_sys_device()
 
         self.chat = create_llm_huggingface(
             device=device,

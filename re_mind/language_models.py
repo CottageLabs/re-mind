@@ -4,7 +4,7 @@ import torch
 from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
 from transformers import pipeline, AutoTokenizer
 
-from re_mind.utils.re_mind_utils import get_global_device
+from re_mind.utils.re_mind_utils import get_global_device, get_sys_device
 
 log = logging.getLogger(__name__)
 
@@ -33,8 +33,8 @@ def create_4bit_quantization_config():
 def create_llm_huggingface(device=None, model_id="google/gemma-3-1b-it", temperature=0.7, max_length=10000,
                            quantization_config=None, return_full_text=False
                            ):
-    if device is None:
-        device = get_global_device()
+
+    device = device or get_sys_device()
 
     model_kwargs = {
         "temperature": temperature, "max_length": max_length,
@@ -68,8 +68,7 @@ def create_llm_huggingface(device=None, model_id="google/gemma-3-1b-it", tempera
 def create_llama3(device=None, temperature=0.7, max_length=10000,
                   return_full_text=False
                   ):
-    if device is None:
-        device = get_global_device()
+    device = device or get_sys_device()
 
     # model_kwargs = {
     #     "temperature": temperature, "max_length": max_length,
@@ -147,12 +146,9 @@ def create_vllm_model():
 
 
 def get_llm(device=None, openai_model=None):
-    if device is None:
-        device = get_global_device()
+    device = device or get_sys_device()
     if openai_model:
-
         llm = create_openai_model()
-
     else:
         llm = create_llm_huggingface(device)
 
