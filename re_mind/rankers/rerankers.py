@@ -44,7 +44,9 @@ class BGEQARanker(QARanker):
 
         self.device = device or re_mind_utils.get_global_device()
         self.batch_size = batch_size
-        self._reranker = FlagReranker(model, use_fp16=True, device=self.device)
+        self._reranker = FlagReranker(model,
+                                      use_fp16=self.device != 'cpu',
+                                      devices=self.device, )
 
     def rank(self, pairs: list[tuple[str, str]]) -> list[float]:
         formatted_pairs = [[query, passage] for query, passage in pairs]
@@ -89,6 +91,10 @@ def cal_score_matrix(queries: list[str], docs: list[Document], ranker: QARanker)
     Returns:
         Numpy array with queries as rows, documents as columns, and scores as values
     """
+
+    assert len(queries) > 0, "No queries provided"
+    assert len(docs) > 0, "No documents provided"
+
     # Create all query-document pairs
     all_pairs = []
     for query in queries:

@@ -10,6 +10,7 @@ from re_mind.rankers.rerankers import rerank_with_qa_ranker, BGEQARanker
 
 log = logging.getLogger(__name__)
 
+# KTODO move to librarian
 
 def quick_retrieve(question: str, vectorstore, n_top_result: int = 8) -> List[Document]:
     quick_retriever = vectorstore.as_retriever(
@@ -19,17 +20,17 @@ def quick_retrieve(question: str, vectorstore, n_top_result: int = 8) -> List[Do
     return quick_retriever.invoke(question)
 
 
-def rerank_retrieve(question: str, vectorstore, n_top_result: int = 8) -> List[Document]:
+def rerank_retrieve(question: str, vectorstore, n_top_result: int = 8, device: str | None = None) -> List[Document]:
     rerank_retriever = vectorstore.as_retriever(
         search_type="similarity",
         search_kwargs={"k": n_top_result + 20}
     )
     docs = rerank_retriever.invoke(question)
-    ranker = BGEQARanker()
+    ranker = BGEQARanker(device=device)
     return rerank_with_qa_ranker(question, docs, ranker, top_m=n_top_result)
 
 
-def complex_retrieve(question: str, vectorstore, llm, n_top_result: int = 8) -> tuple[List[Document], List[str]]:
+def complex_retrieve(question: str, vectorstore, llm, n_top_result: int = 8, device: str | None = None) -> tuple[List[Document], List[str]]:
     multi_query_retriever = vectorstore.as_retriever(
         search_type="similarity",
         search_kwargs={"k": n_top_result + 20}
@@ -40,7 +41,7 @@ def complex_retrieve(question: str, vectorstore, llm, n_top_result: int = 8) -> 
         log.warning("No queries extracted from input.")
         extracted_queries = [question]
 
-    ranker = BGEQARanker()
+    ranker = BGEQARanker(device=device)
 
     docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
     scores = rerankers.cal_score_matrix(extracted_queries, docs, ranker=ranker)
