@@ -9,6 +9,9 @@ class ChatCommand(ABC):
         return user_input.startswith(self.prefix)
 
     def create_nested_dict(self):
+        """
+        For PromptSession auto-completion
+        """
         return {self.prefix: None}
 
     @abstractmethod
