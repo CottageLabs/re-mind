@@ -1,5 +1,5 @@
 """
-Utilities for ChatSession
+Additional Utilities for ChatSession
 """
 
 import typing
