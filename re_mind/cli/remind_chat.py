@@ -2,11 +2,12 @@ import logging
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 from re_mind import cpaths
 from re_mind.cli.chat_session import ChatSession
 from re_mind.cli.chat_session_utils import (
-    print_response,
     get_prompt_message, OUTPUT_MODE_SIMPLE,
 )
 from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, ResetConfigCommand
@@ -50,6 +51,7 @@ def build_completer(commands: list[ChatCommand] | None = None) -> FuzzyCompleter
     Build a nested completer dynamically so 'use <dataset>' picks up new names.
     """
     data = {
+        # TOBEREMOVE
         "/librarian": {"show": None, },  # KTODO add librarian commands
     }
 
@@ -76,7 +78,11 @@ class ChatLoop:
 
     def print_response(self, user_input: str) -> None:
         resp = self.chat_session.chat(user_input)
-        print_response(self.chat_session, resp)
+
+        # Standard response output
+        output = Markdown(resp['answer'])
+        output = Panel(output)
+        self.chat_session.print(output)
 
     def run(self) -> None:
         while True:
@@ -100,6 +106,13 @@ class ChatLoop:
                 continue
 
             self.print_response(user_input)
+
+
+class RemindChatLoop(ChatLoop):
+    def print_response(self, user_input: str) -> None:
+        from re_mind.cli.chat_session_utils import print_response
+        resp = self.chat_session.chat(user_input)
+        print_response(self.chat_session, resp)
 
 
 def main():
