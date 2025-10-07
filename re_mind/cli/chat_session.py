@@ -39,6 +39,8 @@ class ChatSession:
     available_models: list['ModelOption'] = None
 
     def __post_init__(self):
+        if self.console is None:
+            self.console = rich.console.Console()
 
         if self.available_models is None:
             from re_mind.cli.components.model_options import HuggingFaceModelOption, OpenAIModelOption
@@ -122,7 +124,7 @@ class ChatSession:
 
     def chat(self, user_input,
              state: dict = None,
-             configurable: dict = None):
+             configurable: dict = None) -> dict:
         state = state or {}
         configurable = configurable or {}
 
