@@ -28,7 +28,7 @@ Examples:
 ```"""))
             available_models = []
             current_model_name = cs.model_option.name if cs.model_option else None
-            for m in cs.get_available_models():
+            for m in cs.available_models:
                 is_current = current_model_name and m.name == current_model_name
                 model_display = f'- **{m.name}** (current)' if is_current else f'- {m.name}'
                 available_models.append(model_display)

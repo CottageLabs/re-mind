@@ -36,8 +36,17 @@ class ChatSession:
     rag_chain: 'CompiledStateGraph' = None
     device: str = None
     model_option: 'ModelOption' = None
+    available_models: list['ModelOption'] = None
 
     def __post_init__(self):
+
+        if self.available_models is None:
+            from re_mind.cli.components.model_options import HuggingFaceModelOption, OpenAIModelOption
+            self.available_models = [
+                HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
+                OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
+            ]
+
         self.config_manager = ConfigManager(cpaths.CONFIG_PATH)
 
         if self.config is None:
@@ -56,18 +65,10 @@ class ChatSession:
         else:
             self.console.print(message, width=self.console_width)
 
-    @staticmethod
-    def get_available_models():
-        from re_mind.cli.components.model_options import HuggingFaceModelOption, OpenAIModelOption
-        return [
-            HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
-            OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
-        ]
-
     def switch_llm(self, model_option_name: str):
         selected_option = None
         model_option_name = model_option_name.lower().strip()
-        for model_option in self.get_available_models():
+        for model_option in self.available_models:
             if model_option.name.lower() == model_option_name:
                 selected_option = model_option
                 break
@@ -134,6 +135,6 @@ class ChatSession:
                              } | configurable
         response = self.rag_chain.invoke(
             final_state,
-            config={'configurable': final_configurable }
+            config={'configurable': final_configurable}
         )
         return response
