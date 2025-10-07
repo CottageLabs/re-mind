@@ -154,6 +154,6 @@ class ChatSession:
         return response
 
     def print_response(self, response: dict) -> None:
-        output = Markdown(response['answer'])
+        output = Markdown(response['messages'][-1].content)
         output = Panel(output)
         self.print(output)
