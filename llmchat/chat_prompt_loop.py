@@ -6,7 +6,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from llmchat.chat_session import ChatSession
-from re_mind.cli.chat_session_utils import get_prompt_message
+from llmchat.chat_session_utils import get_prompt_message
 from llmchat.commands import ChatCommand
 
 log = logging.getLogger(__name__)

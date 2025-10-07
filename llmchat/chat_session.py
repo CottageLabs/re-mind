@@ -1,12 +1,16 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import rich
 import torch
 
-from re_mind import cpaths, pipelines, components
-from re_mind.config_manager import ConfigManager
+from llmchat.config_manager import ConfigManager
+from llmchat.cpaths import CONFIG_PATH
+from re_mind import pipelines
+
+if TYPE_CHECKING:
+    from langgraph.graph.state import CompiledStateGraph
 
 log = logging.getLogger(__name__)
 
@@ -27,19 +31,17 @@ DEFAULT_CONFIG = {
 
 @dataclass
 class ChatSession:
-
     # Configurations
     config: dict = field(default_factory=dict)
     default_config: dict = None
-    config_path: str = cpaths.CONFIG_PATH
-
+    config_path: str = CONFIG_PATH
 
     llm: 'Any' = None
     rag_chain: 'CompiledStateGraph' = None
     device: str = None
     model_option: 'ModelOption' = None
     available_models: list['ModelOption'] = None
-    vectorstore: 'Any' = None  # KTODO move to remind
+    vectorstore: 'Any' = None
 
     console: rich.console.Console = None
 
@@ -68,6 +70,10 @@ class ChatSession:
             self.console.print()
         else:
             self.console.print(message, width=self.console_width)
+
+    def build_rag_chain(self, llm, vector_store) -> 'CompiledStateGraph':
+        n_top_result = self.config.get('n_top_result', 8)
+        return pipelines.build_rag_app(llm, vector_store=vector_store, n_top_result=n_top_result)
 
     def switch_llm(self, model_option_name: str):
         selected_option = None
@@ -98,10 +104,7 @@ class ChatSession:
             llm = selected_option.create()
 
         if self.llm is None:
-            # KTODO support switch vector store
-            self.vectorstore = self.config.get('vectorstore') or components.get_vector_store()
-            n_top_result = self.config.get('n_top_result', 8)
-            self.rag_chain = pipelines.build_rag_app(llm, n_top_result=n_top_result)
+            self.rag_chain = self.build_rag_chain(llm, self.vectorstore)
 
         self.llm = llm
         self.device = self.config.get('device', 'cpu')
