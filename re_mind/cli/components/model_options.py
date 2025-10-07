@@ -1,18 +1,29 @@
 from abc import abstractmethod, ABC
 
+from langchain_core.language_models import BaseChatModel
+
 
 class ModelOption(ABC):
 
     @property
     def name(self):
+        """
+        identifiable name for the model option
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def create(self):
+    def create(self) -> BaseChatModel:
+        """
+        Create and return the underlying model instance.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def delete(self):
+        """
+        Free VRAM by detaching and deleting the underlying model, if applicable.
+        """
         raise NotImplementedError
 
 
@@ -31,7 +42,7 @@ class HuggingFaceModelOption(ModelOption):
     def name(self):
         return self._name or f"HuggingFace ({self.model_id})"
 
-    def create(self):
+    def create(self) -> BaseChatModel:
         from re_mind.language_models import create_llm_huggingface
         from re_mind.utils import re_mind_utils as llm_utils
 
@@ -109,7 +120,7 @@ class OpenAIModelOption(ModelOption):
     def name(self):
         return self._name or f"OpenAI ({self.model})"
 
-    def create(self):
+    def create(self) -> BaseChatModel:
         from re_mind.language_models import create_openai_model
 
         llm = create_openai_model(model=self.model)
