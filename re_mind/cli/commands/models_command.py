@@ -4,8 +4,8 @@ from .command_utils import extract_command_arg
 
 
 class ModelsCommand(ChatCommand):
-    def __init__(self):
-        super().__init__('/models')
+    def __init__(self, prefix: str = '/models'):
+        super().__init__(prefix)
 
     # KTODO add available models list to auto completer
 

@@ -4,8 +4,8 @@ from .chat_command_base import ChatCommand
 
 
 class ResetConfigCommand(ChatCommand):
-    def __init__(self):
-        super().__init__('/reset_config')
+    def __init__(self, prefix: str = '/reset_config'):
+        super().__init__(prefix)
 
     def run(self, user_input: str, cs: 'ChatSession'):
         from re_mind.cli.chat_session import DEFAULT_CONFIG

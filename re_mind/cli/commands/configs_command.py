@@ -7,8 +7,8 @@ from .chat_command_base import ChatCommand
 
 
 class ConfigsCommand(ChatCommand):
-    def __init__(self, ):
-        super().__init__('/configs')
+    def __init__(self, prefix: str = '/configs'):
+        super().__init__(prefix)
 
     def run(self, user_input: str, cs: 'ChatSession'):
         param = command_utils.extract_command_arg(self.prefix, user_input)

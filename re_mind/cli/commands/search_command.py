@@ -5,8 +5,8 @@ from .command_utils import extract_command_arg
 
 
 class SearchCommand(ChatCommand):
-    def __init__(self, ):
-        super().__init__('/search')
+    def __init__(self, prefix: str = '/search'):
+        super().__init__(prefix)
 
     def run(self, user_input: str, cs: 'ChatSession'):
         query = extract_command_arg(self.prefix, user_input)
