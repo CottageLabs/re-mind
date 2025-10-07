@@ -23,6 +23,8 @@ class ConfigsCommand(ChatCommand):
                     cs.switch_llm(cs.model_option.name)
                     cs.print(f"[green]Configuration updated: device = {value}[/green]")
                 else:
+                    if key not in cs.config:
+                        cs.print(f"[red]Unknown configuration key: {key}[/red]")
                     cs.config[key] = type(cs.config.get(key, value))(value)
                     cs.save_config()
 
