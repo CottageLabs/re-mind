@@ -27,6 +27,25 @@ class ReminChatSession(ChatSession):
         n_top_result = self.config.get('n_top_result', 8)
         return pipelines.build_rag_app(llm, vector_store=vector_store, n_top_result=n_top_result)
 
+    def chat(self, user_input,
+             state: dict = None,
+             configurable: dict = None) -> dict:
+        state = state or {}
+        configurable = configurable or {}
+
+        final_state = {'question': user_input} | state
+        final_configurable = {
+                                 'llm': self.llm,
+                                 'vectorstore': self.vectorstore,
+                                 'device': self.device,
+                                 # KTODO handle n_top_result, temperature, etc.
+                             } | configurable
+        response = self.rag_chain.invoke(
+            final_state,
+            config={'configurable': final_configurable}
+        )
+        return response
+
 
 class RemindChatPromptLoop(ChatPromptLoop):
     def print_response(self, user_input: str) -> None:
