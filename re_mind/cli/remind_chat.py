@@ -1,6 +1,5 @@
 import logging
 
-import rich
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 
@@ -10,6 +9,7 @@ from re_mind.cli.chat_session_utils import (
     get_prompt_message,
 )
 from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, ResetConfigCommand
+from re_mind.cli.components.model_options import HuggingFaceModelOption, OpenAIModelOption
 
 # KTODO support librarian mode (list, add, remove documents)
 # KTODO add command librarian
@@ -22,6 +22,26 @@ from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, Mod
 # KTODO support switch vector store
 
 log = logging.getLogger(__name__)
+
+
+def validate_command_prefixes(commands: list[ChatCommand]) -> None:
+    """
+    Validate that no two commands have duplicate prefixes.
+
+    Raises:
+        ValueError: If duplicate prefixes are found.
+    """
+    prefixes = [cmd.prefix for cmd in commands]
+    seen = set()
+    duplicates = set()
+
+    for prefix in prefixes:
+        if prefix in seen:
+            duplicates.add(prefix)
+        seen.add(prefix)
+
+    if duplicates:
+        raise ValueError(f"Duplicate command prefixes found: {', '.join(sorted(duplicates))}")
 
 
 def build_completer(commands: list[ChatCommand] | None = None) -> FuzzyCompleter:
@@ -39,52 +59,63 @@ def build_completer(commands: list[ChatCommand] | None = None) -> FuzzyCompleter
     return FuzzyCompleter(nested)
 
 
-def run_remind_chat():
-    console = rich.console.Console()
-    prompt_session = PromptSession()
-    with console.status("Initializing RAG session..."):
-        cs = ChatSession(console=console)
-        cs.switch_llm(cs.config['model_option_name'])
+class ChatLoop:
+    def __init__(self, chat_session: ChatSession, commands: list[ChatCommand]):
+        self.chat_session = chat_session
+        self.commands = commands
+        self.prompt_session = PromptSession()
+        self.completer = None
 
+    def initialize(self) -> None:
+        with self.chat_session.console.status("Initializing RAG session..."):
+            self.chat_session.switch_llm(self.chat_session.config['model_option_name'])
+
+        validate_command_prefixes(self.commands)
+        self.completer = build_completer(self.commands)
+
+    def print_response(self, user_input: str) -> None:
+        resp = self.chat_session.chat(user_input)
+        print_response(self.chat_session, resp)
+
+    def run(self) -> None:
+        while True:
+            try:
+                prompt_message = get_prompt_message(self.chat_session)
+                user_input = self.prompt_session.prompt(prompt_message, completer=self.completer)
+                if not user_input.strip():
+                    continue
+            except (EOFError, KeyboardInterrupt):
+                print("Exiting chat...")
+                break
+
+            should_chat = True
+            for command in self.commands:
+                if command.is_match(user_input):
+                    command.run(user_input, self.chat_session)
+                    should_chat = False
+                    break
+
+            if not should_chat:
+                continue
+
+            self.print_response(user_input)
+
+
+def main():
+    model_options = [
+        HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
+        OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
+    ]
     commands = [
         ConfigsCommand(),
         SearchCommand(),
         ModelsCommand(),
         ResetConfigCommand(),
     ]
-    completer = build_completer(commands)
-    # KTODO add assert to check command prefix not conflict
-
-    # Chat loop
-    while True:
-        try:
-            prompt_message = get_prompt_message(cs)
-            user_input = prompt_session.prompt(prompt_message, completer=completer)
-            if not user_input.strip():
-                continue
-
-        except (EOFError, KeyboardInterrupt):
-            print("Exiting chat...")
-            break
-
-        should_chat = True
-        for command in commands:
-            if command.is_match(user_input):
-                command.run(user_input, cs)
-                should_chat = False
-                break
-
-        if not should_chat:
-            continue
-
-        # with cs.console.status("Generating response..."):
-        resp = cs.chat(user_input)
-
-        print_response(cs, resp)
-
-
-def main():
-    run_remind_chat()
+    cs = ChatSession(available_models=model_options)
+    chat_loop = ChatLoop(cs, commands)
+    chat_loop.initialize()
+    chat_loop.run()
 
 
 if __name__ == '__main__':
