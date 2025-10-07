@@ -46,11 +46,8 @@ class ReminChatSession(ChatSession):
         )
         return response
 
-
-class RemindChatPromptLoop(ChatPromptLoop):
-    def print_response(self, user_input: str) -> None:
-        resp = self.chat_session.chat(user_input)
-        print_response(self.chat_session, resp)
+    def print_response(self, response: dict) -> None:
+        print_response(self, response)
 
 
 def main():
@@ -82,7 +79,7 @@ def main():
     cs = ReminChatSession(available_models=model_options, default_config=DEFAULT_CONFIG,
                           config_path=cpaths.CONFIG_PATH,
                           vectorstore=components.get_vector_store())
-    chat_loop = RemindChatPromptLoop(cs, commands)
+    chat_loop = ChatPromptLoop(cs, commands)
     chat_loop.initialize()
     chat_loop.run()
 

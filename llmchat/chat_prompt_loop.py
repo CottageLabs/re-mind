@@ -2,8 +2,6 @@ import logging
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
-from rich.markdown import Markdown
-from rich.panel import Panel
 
 from llmchat.chat_session import ChatSession
 from llmchat.chat_session_utils import get_prompt_message
@@ -62,14 +60,6 @@ class ChatPromptLoop:
         validate_command_prefixes(self.commands)
         self.completer = build_completer(self.commands)
 
-    def print_response(self, user_input: str) -> None:
-        resp = self.chat_session.chat(user_input)
-
-        # Standard response output
-        output = Markdown(resp['answer'])
-        output = Panel(output)
-        self.chat_session.print(output)
-
     def run(self) -> None:
         while True:
             try:
@@ -91,4 +81,5 @@ class ChatPromptLoop:
             if not should_chat:
                 continue
 
-            self.print_response(user_input)
+            resp = self.chat_session.chat(user_input)
+            self.chat_session.print_response(resp)

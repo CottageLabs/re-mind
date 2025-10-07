@@ -6,6 +6,8 @@ from typing import Any, TYPE_CHECKING
 import rich
 import torch
 from langchain_core.messages import HumanMessage
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 from llmchat.config_manager import ConfigManager
 from llmchat.cpaths import CONFIG_PATH
@@ -150,3 +152,8 @@ class ChatSession:
             config={'configurable': final_configurable}
         )
         return response
+
+    def print_response(self, response: dict) -> None:
+        output = Markdown(response['answer'])
+        output = Panel(output)
+        self.print(output)
