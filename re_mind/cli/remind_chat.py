@@ -1,12 +1,12 @@
 import logging
 
 from llmchat.chat_prompt_loop import ChatPromptLoop
-from llmchat.commands import ConfigsCommand, ModelsCommand, ResetConfigCommand
-from re_mind import cpaths
 from llmchat.chat_session import ChatSession
+from llmchat.commands import ConfigsCommand, ModelsCommand, ResetConfigCommand
+from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
+from re_mind import cpaths, components
 from re_mind.cli.chat_session_utils import OUTPUT_MODE_SIMPLE, print_response
 from re_mind.cli.commands import SearchCommand
-from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
 
 # KTODO support librarian mode (list, add, remove documents)
 # KTODO add command librarian
@@ -19,6 +19,13 @@ from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModel
 # KTODO support switch vector store
 
 log = logging.getLogger(__name__)
+
+
+class ReminChatSession(ChatSession):
+    def build_rag_chain(self, llm, vector_store) -> 'CompiledStateGraph':
+        from re_mind import pipelines
+        n_top_result = self.config.get('n_top_result', 8)
+        return pipelines.build_rag_app(llm, vector_store=vector_store, n_top_result=n_top_result)
 
 
 class RemindChatPromptLoop(ChatPromptLoop):
@@ -53,9 +60,10 @@ def main():
         ModelsCommand(),
         ResetConfigCommand(),
     ]
-    cs = ChatSession(available_models=model_options, default_config=DEFAULT_CONFIG,
-                     config_path=cpaths.CONFIG_PATH)
-    chat_loop = ChatPromptLoop(cs, commands)
+    cs = ReminChatSession(available_models=model_options, default_config=DEFAULT_CONFIG,
+                          config_path=cpaths.CONFIG_PATH,
+                          vectorstore=components.get_vector_store())
+    chat_loop = RemindChatPromptLoop(cs, commands)
     chat_loop.initialize()
     chat_loop.run()
 
