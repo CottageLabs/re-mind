@@ -32,7 +32,7 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["re_mind*", "librarian*"]
+include = ["re_mind*", "librarian*", "llmchat"]
 
 
 [project.scripts]

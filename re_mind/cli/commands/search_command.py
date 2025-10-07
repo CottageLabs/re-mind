@@ -1,7 +1,7 @@
+from llmchat.commands.chat_command_base import ChatCommand
+from llmchat.commands.command_utils import extract_command_arg
 from re_mind import retrievers, components
 from re_mind.cli.chat_session_utils import print_search_results
-from .chat_command_base import ChatCommand
-from .command_utils import extract_command_arg
 
 
 class SearchCommand(ChatCommand):

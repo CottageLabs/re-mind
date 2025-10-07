@@ -8,7 +8,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 if typing.TYPE_CHECKING:
-    from re_mind.cli.chat_session import ChatSession
+    from llmchat.chat_session import ChatSession
 
 OUTPUT_MODE_SIMPLE = 'simple'
 OUTPUT_MODE_DETAIL = 'detail'
@@ -16,7 +16,7 @@ OUTPUT_MODE_DEBUG = 'debug'
 
 
 def get_prompt_message(cs: 'ChatSession') -> str:
-    from re_mind.cli.components.model_options import HuggingFaceModelOption
+    from llmchat.components.model_options import HuggingFaceModelOption
 
     model_name = cs.config.get('model_option_name', 'unknown')
     output_mode = cs.config.get('output_mode', OUTPUT_MODE_SIMPLE)

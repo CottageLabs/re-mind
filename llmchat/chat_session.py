@@ -48,7 +48,7 @@ class ChatSession:
             self.console = rich.console.Console()
 
         if self.available_models is None:
-            from re_mind.cli.components.model_options import HuggingFaceModelOption, OpenAIModelOption
+            from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
             self.available_models = [
                 HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
                 OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),

@@ -8,7 +8,7 @@ class ResetConfigCommand(ChatCommand):
         super().__init__(prefix)
 
     def run(self, user_input: str, cs: 'ChatSession'):
-        from re_mind.cli.chat_session import DEFAULT_CONFIG
+        from llmchat.chat_session import DEFAULT_CONFIG
         cs.config = DEFAULT_CONFIG.copy()
         cs.save_config()
         cs.print("[green]Configuration has been reset to default values.[/green]")
