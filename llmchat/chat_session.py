@@ -1,4 +1,5 @@
 import logging
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, TYPE_CHECKING
 
@@ -7,7 +8,6 @@ import torch
 
 from llmchat.config_manager import ConfigManager
 from llmchat.cpaths import CONFIG_PATH
-from re_mind import pipelines
 
 if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
@@ -42,6 +42,7 @@ class ChatSession:
     model_option: 'ModelOption' = None
     available_models: list['ModelOption'] = None
     vectorstore: 'Any' = None
+    thread_id: str = None
 
     console: rich.console.Console = None
 
@@ -55,6 +56,9 @@ class ChatSession:
                 HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
                 OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
             ]
+
+        if self.thread_id is None:
+            self.thread_id = str(uuid.uuid4())
 
         self.config_manager = ConfigManager(self.config_path)
 
@@ -72,8 +76,8 @@ class ChatSession:
             self.console.print(message, width=self.console_width)
 
     def build_rag_chain(self, llm, vector_store) -> 'CompiledStateGraph':
-        n_top_result = self.config.get('n_top_result', 8)
-        return pipelines.build_rag_app(llm, vector_store=vector_store, n_top_result=n_top_result)
+        from llmchat import pipelines
+        return pipelines.build_simple_chat_app(llm)
 
     def switch_llm(self, model_option_name: str):
         selected_option = None
@@ -135,6 +139,7 @@ class ChatSession:
 
         final_state = {'question': user_input} | state
         final_configurable = {
+                                 "thread_id": self.thread_id,
                                  'llm': self.llm,
                                  'vectorstore': self.vectorstore,
                                  'device': self.device,
