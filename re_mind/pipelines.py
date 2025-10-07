@@ -231,6 +231,7 @@ def build_rag_app(
         n_top_result: int = 8,
         cite_metadata_keys: Tuple[str, ...] = ("source", "page"),
         instruction: str = DEFAULT_RAG_INSTRUCTION,
+        vector_store: Any = None,
 ):
     """
     Build a deterministic RAG graph that: question -> quick_retrieve -> synthesize.
@@ -328,12 +329,13 @@ def build_rag_app(
     app = g.compile()
 
     # Set default config for llm, device, and vectorstore
-    app = app.with_config({
-        "configurable": {
-            "llm": llm,
-            "device": "cpu",
-            # KTODO make pipeline support vectorstore=None
-        }
-    })
+    configurable = {
+        "llm": llm,
+        "device": "cpu",
+    }
+    if vector_store is not None:
+        configurable["vectorstore"] = vector_store
+
+    app = app.with_config({"configurable": configurable})
 
     return app
