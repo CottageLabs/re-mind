@@ -1,12 +1,11 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import rich
 import torch
 
 from re_mind import cpaths, pipelines, components
-from re_mind.cli.chat_session_utils import OUTPUT_MODE_SIMPLE
 from re_mind.config_manager import ConfigManager
 
 log = logging.getLogger(__name__)
@@ -19,7 +18,6 @@ DEFAULT_CONFIG = {
     'temperature': 1.2,
     'n_top_result': 6,
     'model_option_name': 'gemma-3-1b',
-    'output_mode': OUTPUT_MODE_SIMPLE,
 
     # Hugging Face LLM
     'device': 'cuda',
@@ -29,14 +27,21 @@ DEFAULT_CONFIG = {
 
 @dataclass
 class ChatSession:
-    config: dict = None
-    console: rich.console.Console = None
+
+    # Configurations
+    config: dict = field(default_factory=dict)
+    default_config: dict = None
+    config_path: str = cpaths.CONFIG_PATH
+
+
     llm: 'Any' = None
-    vectorstore: 'Any' = None
     rag_chain: 'CompiledStateGraph' = None
     device: str = None
     model_option: 'ModelOption' = None
     available_models: list['ModelOption'] = None
+    vectorstore: 'Any' = None  # KTODO move to remind
+
+    console: rich.console.Console = None
 
     def __post_init__(self):
         if self.console is None:
@@ -49,13 +54,10 @@ class ChatSession:
                 OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
             ]
 
-        self.config_manager = ConfigManager(cpaths.CONFIG_PATH)
-
-        if self.config is None:
-            self.config = self.config_manager.load()
+        self.config_manager = ConfigManager(self.config_path)
 
         if not self.config:
-            self.config = DEFAULT_CONFIG.copy()
+            self.config = self.config_manager.load() or (self.default_config or DEFAULT_CONFIG).copy()
 
     @property
     def console_width(self):

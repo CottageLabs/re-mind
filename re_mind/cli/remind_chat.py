@@ -3,10 +3,11 @@ import logging
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter, FuzzyCompleter
 
+from re_mind import cpaths
 from re_mind.cli.chat_session import ChatSession
 from re_mind.cli.chat_session_utils import (
     print_response,
-    get_prompt_message,
+    get_prompt_message, OUTPUT_MODE_SIMPLE,
 )
 from re_mind.cli.commands import ChatCommand, ConfigsCommand, SearchCommand, ModelsCommand, ResetConfigCommand
 from re_mind.cli.components.model_options import HuggingFaceModelOption, OpenAIModelOption
@@ -102,6 +103,21 @@ class ChatLoop:
 
 
 def main():
+    DEFAULT_CONFIG = {
+        # Chat
+        'max_width': 100,
+
+        # RAG Session
+        'temperature': 1.2,
+        'n_top_result': 6,
+        'model_option_name': 'gemma-3-1b',
+        'output_mode': OUTPUT_MODE_SIMPLE,
+
+        # Hugging Face LLM
+        'device': 'cuda',
+        'return_full_text': False,
+    }
+
     model_options = [
         HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
         OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
@@ -112,7 +128,8 @@ def main():
         ModelsCommand(),
         ResetConfigCommand(),
     ]
-    cs = ChatSession(available_models=model_options)
+    cs = ChatSession(available_models=model_options, default_config=DEFAULT_CONFIG,
+                     config_path=cpaths.CONFIG_PATH)
     chat_loop = ChatLoop(cs, commands)
     chat_loop.initialize()
     chat_loop.run()
