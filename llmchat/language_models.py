@@ -4,7 +4,7 @@ import torch
 from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
 from transformers import pipeline, AutoTokenizer
 
-from re_mind.utils.re_mind_utils import get_global_device, get_sys_device
+from llmchat.torch_utils import get_sys_device
 
 log = logging.getLogger(__name__)
 

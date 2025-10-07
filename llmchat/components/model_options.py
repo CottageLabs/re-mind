@@ -43,12 +43,12 @@ class HuggingFaceModelOption(ModelOption):
         return self._name or f"HuggingFace ({self.model_id})"
 
     def create(self) -> BaseChatModel:
-        from re_mind.language_models import create_llm_huggingface
-        from re_mind.utils import re_mind_utils as llm_utils
+        from llmchat.language_models import create_llm_huggingface
+        from llmchat.torch_utils import get_sys_device
 
         device = self.device
         if device is None:
-            device = llm_utils.get_sys_device()
+            device = get_sys_device()
 
         self.chat = create_llm_huggingface(
             device=device,
@@ -121,7 +121,7 @@ class OpenAIModelOption(ModelOption):
         return self._name or f"OpenAI ({self.model})"
 
     def create(self) -> BaseChatModel:
-        from re_mind.language_models import create_openai_model
+        from llmchat.language_models import create_openai_model
 
         llm = create_openai_model(model=self.model)
         return llm

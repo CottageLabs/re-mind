@@ -3,4 +3,4 @@ from librarian.components import (  # noqa
     get_client,
     get_embedding,
 )
-from re_mind.language_models import get_llm  # noqa
+from llmchat.language_models import get_llm  # noqa
