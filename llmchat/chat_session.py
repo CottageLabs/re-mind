@@ -5,6 +5,7 @@ from typing import Any, TYPE_CHECKING
 
 import rich
 import torch
+from langchain_core.messages import HumanMessage
 
 from llmchat.config_manager import ConfigManager
 from llmchat.cpaths import CONFIG_PATH
@@ -137,11 +138,10 @@ class ChatSession:
         state = state or {}
         configurable = configurable or {}
 
-        final_state = {'question': user_input} | state
+        final_state = {'messages': [HumanMessage(user_input)]} | state
         final_configurable = {
                                  "thread_id": self.thread_id,
                                  'llm': self.llm,
-                                 'vectorstore': self.vectorstore,
                                  'device': self.device,
                                  # KTODO handle n_top_result, temperature, etc.
                              } | configurable
