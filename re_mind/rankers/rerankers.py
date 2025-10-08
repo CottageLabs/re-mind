@@ -6,7 +6,7 @@ from langchain_core.documents import Document
 
 from re_mind import components
 from re_mind.utils import raq_utils
-from llmchat import torch_utils
+from llmchat.torch_utils import get_sys_device
 
 
 class QARanker(ABC):
@@ -25,7 +25,7 @@ class CEQARanker(QARanker):
     ) -> None:
         from sentence_transformers import CrossEncoder
 
-        self.device = device or torch_utils.get_sys_device()
+        self.device = device or get_sys_device()
         self.batch_size = batch_size
         self._encoder = CrossEncoder(model, device=self.device)
 
@@ -43,7 +43,7 @@ class BGEQARanker(QARanker):
     ) -> None:
         from FlagEmbedding import FlagReranker
 
-        self.device = device or torch_utils.get_sys_device()
+        self.device = device or get_sys_device()
         self.batch_size = batch_size
         self._reranker = FlagReranker(model,
                                       use_fp16=self.device != 'cpu',

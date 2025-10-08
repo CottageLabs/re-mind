@@ -852,6 +852,11 @@ wheels = [
 ]
 
 [[package]]
+name = "llmchat"
+version = "0.1.0"
+source = { editable = "../llmchat" }
+
+[[package]]
 name = "lxml"
 version = "6.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1713,6 +1718,7 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langchain-qdrant" },
     { name = "langgraph" },
+    { name = "llmchat" },
     { name = "openai" },
     { name = "prompt-toolkit" },
     { name = "pydantic" },
@@ -1740,6 +1746,7 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=0.3.32" },
     { name = "langchain-qdrant", specifier = ">=0.2.0" },
     { name = "langgraph", specifier = ">=0.6.7" },
+    { name = "llmchat", editable = "../llmchat" },
     { name = "openai", specifier = ">=1.102.0" },
     { name = "prompt-toolkit", specifier = ">=3.0.52" },
     { name = "pydantic", specifier = ">=2.11.7" },

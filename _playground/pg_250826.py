@@ -16,7 +16,6 @@ from re_mind.pipelines import build_rag_app
 from re_mind.rankers import rerankers
 from librarian.text_processing import save_pdf_to_vectorstore
 from librarian import utils as llm_utils
-from re_mind.utils import iter_utils
 from re_mind.utils.raq_utils import print_result
 
 

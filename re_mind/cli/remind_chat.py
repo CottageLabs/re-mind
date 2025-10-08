@@ -1,7 +1,7 @@
 import logging
 
-from llmchat.chat_prompt_loop import ChatPromptLoop
-from llmchat.chat_session import ChatSession
+from llmchat import ChatPromptLoop
+from llmchat import ChatSession
 from llmchat.commands import ConfigsCommand, ModelsCommand, ResetConfigCommand
 from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
 from re_mind import cpaths, components

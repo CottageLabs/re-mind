@@ -8,7 +8,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 if typing.TYPE_CHECKING:
-    from llmchat.chat_session import ChatSession
+    from llmchat import ChatSession
 
 OUTPUT_MODE_SIMPLE = 'simple'
 OUTPUT_MODE_DETAIL = 'detail'
