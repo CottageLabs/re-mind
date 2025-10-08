@@ -9,13 +9,12 @@ from rich.markdown import Markdown
 from rich.rule import Rule
 
 from re_mind import components, pipelines
-from librarian.db.qdrant import get_client
+from librarian.db.qdrant import get_client, utils as llm_utils
 from llmchat.language_models import create_llm_huggingface, create_openai_model
 from re_mind.llm_tasks import extract_queries_from_input, retrieve_and_deduplicate_docs
 from re_mind.pipelines import build_rag_app
 from re_mind.rankers import rerankers
-from librarian.text_processing import save_pdf_to_vectorstore
-from librarian import utils as llm_utils
+from librarian import save_pdf_to_vectorstore
 from re_mind.utils.raq_utils import print_result
 
 

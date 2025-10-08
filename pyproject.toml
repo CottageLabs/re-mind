@@ -16,6 +16,7 @@ dependencies = [
     "langchain-openai>=0.3.32",
     "langchain-qdrant>=0.2.0",
     "langgraph>=0.6.7",
+    "librarian",
     "llmchat",
     "openai>=1.102.0",
     "pydantic>=2.11.7",
@@ -32,12 +33,12 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["re_mind*", "librarian*"]
+include = ["re_mind*", ]
 
 [tool.uv.sources]
 llmchat = { path = "../llmchat", editable = true }
+librarian = { path = "../librarian", editable = true }
 
 
 [project.scripts]
 remind-chat = "re_mind.cli.remind_chat:main"
-librarian = "librarian.librarian_cli:main"
