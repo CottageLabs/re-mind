@@ -2,12 +2,6 @@ import click
 
 
 @click.group()
-def main():
-    """Re:Mind CLI"""
-    pass
-
-
-@main.group()
 def librarian():
     """Manage documents in the library"""
     pass
@@ -65,11 +59,5 @@ def librarian_rm(hash_id):
         click.echo(f"Document with hash {hash_id} not found.")
 
 
-@main.command()
-def test():
-    from _playground.pg_250826 import main5__test_rqg_qa
-    main5__test_rqg_qa()
-
-
 if __name__ == '__main__':
-    main()
+    librarian()

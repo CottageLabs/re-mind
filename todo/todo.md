@@ -6,9 +6,10 @@
 - [ ] Define metric to evaluate the performance of RAG application
 - [ ] Context length management for long documents
 
-## Vector Store
-- [x] avoid re-import the same file
+## Librarian / Vector Store 
+- [ ] support MCP
 - [ ] create a class Librarian to handle add_file, delete_file, query
+- [x] avoid re-import the same file
 
 ## Chat app
 - [ ] Continuous chat conversation
