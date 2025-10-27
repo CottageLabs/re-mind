@@ -1,4 +1,4 @@
-from librarian import (  # noqa
+from librarian.components import (  # noqa
     get_vector_store,
     get_client,
     get_embedding,
