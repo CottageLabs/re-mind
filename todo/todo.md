@@ -26,9 +26,13 @@
 
 
 ## Remin Chat
-- [ ] Make it easier to switch vector store
 - [ ] Support sequences messages context
 - [ ] Design how to filter with metadata
 - [x] support search only mode 
 - [x] support switch llm
 - [x] output_mode [debug / detail / simple]
+
+### Vector Store
+- [ ] Make it easier to switch vector store
+- [ ] Add command that show report of vector store (e.g. number of docs, size, embedding model)
+- [ ] Add command to show and switch vector store
