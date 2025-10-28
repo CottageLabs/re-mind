@@ -68,6 +68,8 @@ def main():
 
     model_options = [
         HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
+        HuggingFaceModelOption(name='gemma-3-4b', model_id="google/gemma-3-4b-it"),
+        HuggingFaceModelOption(name='llama-3-3b', model_id='huihui-ai/Llama-3.2-3B-Instruct-abliterated'),
         OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
     ]
     commands = [
