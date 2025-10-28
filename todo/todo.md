@@ -1,8 +1,8 @@
-- [ ] Support multi llm model (local hugging, openai...)
+- [x] Support multi llm model (local hugging, openai...)
 - [ ] Support different embedding model for vector store
 - [r] Add cli tool to load file to vector store
 - [ ] Support prompt template as command
-- [ ] Use LangGraph for complex workflow
+- [x] Use LangGraph for complex workflow
 - [ ] Define metric to evaluate the performance of RAG application
 - [ ] Context length management for long documents
 
@@ -26,6 +26,9 @@
 
 
 ## Remin Chat
+- [ ] Make it easier to switch vector store
+- [ ] Support sequences messages context
+- [ ] Design how to filter with metadata
 - [x] support search only mode 
 - [x] support switch llm
 - [x] output_mode [debug / detail / simple]
