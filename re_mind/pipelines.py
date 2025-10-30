@@ -1,3 +1,4 @@
+import warnings
 from typing import TypedDict, List, Tuple, Literal, Any
 
 from langchain_core.documents import Document
@@ -16,6 +17,7 @@ from re_mind.lc_prompts import DEFAULT_RAG_INSTRUCTION
 
 
 def create_basic_qa(llm, n_top_result=8):
+    warnings.warn(f'demo only, no longer used in main pipelines', DeprecationWarning)
     def format_docs(documents):
         return "\n\n".join(
             f"[{d.metadata.get('source', '?')}] {d.page_content}" for d in documents
@@ -70,6 +72,7 @@ def get_current_temperature(location: str, unit: str) -> float:
 
 
 def create_demo_graph(llm, n_top_result=8):
+    warnings.warn(f'demo only, no longer used in main pipelines', DeprecationWarning)
     tools = [get_price, yo_back, get_current_temperature]
     try:
         llm = llm.bind_tools(tools, tool_choice='auto')
@@ -137,6 +140,7 @@ def create_demo_graph(llm, n_top_result=8):
 
 
 def create_demo_graph2(llm, n_top_result=8):
+    warnings.warn(f'demo only, no longer used in main pipelines', DeprecationWarning)
     tools = [get_price, yo_back, get_current_temperature]
     llm_with_tools = llm.bind_tools(tools, tool_choice='auto')
 
