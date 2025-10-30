@@ -6,11 +6,6 @@
 - [ ] Define metric to evaluate the performance of RAG application
 - [ ] Context length management for long documents
 
-## Chat app
-- [ ] Continuous chat conversation
-- [ ] try langgraph to call different tasks
-- [ ] build general tool model with openai function calling
-
 ## Pipeline
 - [ ] KTODO add plan before retrieve
 - [ ] KTODO add re-rank after retrieve
@@ -28,6 +23,8 @@
 ## Remin Chat
 - [ ] Support sequences messages context
 - [ ] Design how to filter with metadata
+- [ ] try langgraph to call different tasks
+- [ ] build general tool model with openai function calling
 - [x] support search only mode 
 - [x] support switch llm
 - [x] output_mode [debug / detail / simple]
