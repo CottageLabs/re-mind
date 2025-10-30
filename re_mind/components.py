@@ -1,13 +1,12 @@
-from librarian.components import (  # noqa
-    get_embedding,
-)
 from llmchat.language_models import get_llm  # noqa
 
 
 def get_client(**kwargs):
+    # KTODO we can remove librarian dependency here by copying the code
+    # KTODO remove librarian dependency from re-mind
     from librarian.components import get_client as get_client_impl
-    from re_mind import cpaths
-    return get_client_impl(path=cpaths.QDRANT_DATA_PATH, **kwargs)
+    from re_mind.envvars import get_qdrant_data_path
+    return get_client_impl(path=get_qdrant_data_path(), **kwargs)
 
 
 def get_vector_store(**kwargs):
