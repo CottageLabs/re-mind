@@ -2,11 +2,12 @@ import logging
 
 from llmchat import ChatPromptLoop
 from llmchat import ChatSession
-from llmchat.commands import ConfigsCommand, ModelsCommand, ResetConfigCommand
+from llmchat.commands import ModelsCommand, ResetConfigCommand
 from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
 from re_mind import cpaths, components
 from re_mind.cli.chat_session_utils import OUTPUT_MODE_SIMPLE, print_response
 from re_mind.cli.commands import SearchCommand
+from re_mind.commands.configs_command import ConfigsExtCommand
 
 # KTODO support librarian mode (list, add, remove documents)
 # KTODO add command librarian
@@ -68,12 +69,11 @@ def main():
 
     model_options = [
         HuggingFaceModelOption(name='gemma-3-1b', model_id="google/gemma-3-1b-it"),
-        HuggingFaceModelOption(name='gemma-3-4b', model_id="google/gemma-3-4b-it"),
         HuggingFaceModelOption(name='llama-3-3b', model_id='huihui-ai/Llama-3.2-3B-Instruct-abliterated'),
         OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
     ]
     commands = [
-        ConfigsCommand(),
+        ConfigsExtCommand(),
         SearchCommand(),
         ModelsCommand(),
         ResetConfigCommand(),
