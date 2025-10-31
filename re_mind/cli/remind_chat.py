@@ -4,7 +4,7 @@ from llmchat import ChatPromptLoop
 from llmchat import ChatSession
 from llmchat.commands import ModelsCommand, ResetConfigCommand
 from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
-from re_mind import cpaths, components
+from re_mind import cpaths, components, constants
 from re_mind.cli.chat_session_utils import OUTPUT_MODE_SIMPLE, print_response
 from re_mind.cli.commands import SearchCommand
 from re_mind.commands.configs_command import ConfigsExtCommand
@@ -65,6 +65,9 @@ def main():
         # Hugging Face LLM
         'device': 'cuda',
         'return_full_text': False,
+
+        # Vector Store
+        'collection_name': constants.DEFAULT_COLLECTION_NAME,
     }
 
     model_options = [
