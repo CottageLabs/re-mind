@@ -44,6 +44,7 @@ def complex_retrieve(question: str, vectorstore, llm, n_top_result: int = 8, dev
     ranker = BGEQARanker(device=device)
 
     docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
+    # KTODO handle empty docs
     scores = rerankers.cal_score_matrix(extracted_queries, docs, ranker=ranker)
     top_docs = rerankers.aggregate_scores(scores, docs, k_final=n_top_result)
 
