@@ -23,10 +23,10 @@ log = logging.getLogger(__name__)
 
 
 class ReminChatSession(ChatSession):
-    def build_rag_chain(self, llm, vector_store) -> 'CompiledStateGraph':
+    def build_rag_chain(self) -> 'CompiledStateGraph':
         from re_mind import pipelines
         n_top_result = self.config.get('n_top_result', 8)
-        return pipelines.build_rag_app(llm, vector_store=vector_store, n_top_result=n_top_result)
+        return pipelines.build_rag_app(self.llm, n_top_result=n_top_result)
 
     def chat(self, user_input,
              state: dict = None,
