@@ -46,7 +46,7 @@ class ConfigsExtCommand(ChatCommand):
         table.add_column(style="cyan", no_wrap=True)
         table.add_column(style="white")
         table.add_row("Qdrant data path", str(envvars.get_qdrant_data_path()))
-        table.add_row("Collection name", cs.vectorstore.collection_name)
+        table.add_row("Collection name", cs.config.get('collection_name', 'N/A'))
         cs.print(table)
 
         cs.print(Markdown("## Configuration Commands"))
