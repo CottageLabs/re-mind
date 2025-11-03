@@ -1,6 +1,6 @@
 from llmchat.commands import ChatCommand
 from llmchat.commands.command_utils import extract_command_arg
-from re_mind import retrievers, components
+from re_mind import retrievers
 from re_mind.cli.chat_session_utils import print_search_results
 
 
@@ -15,7 +15,12 @@ class SearchCommand(ChatCommand):
             cs.print("Example: /search What is the capital of France?")
             return
 
-        vectorstore = components.get_vector_store()
+        collection_name = cs.config.get('collection_name')
+        vectorstore = cs.vector_store_factory(collection_name=collection_name)
+        if vectorstore is None:
+            cs.print("[red]Vector store is not configured. Update your vector store settings before running /search.[/red]")
+            return
         docs, extracted_queries = retrievers.complex_retrieve(query, vectorstore, cs.llm, cs.config['n_top_result'],
                                                               device=cs.config.get('device'))
+        vectorstore.client.close()
         print_search_results(cs, query, docs, extracted_queries)

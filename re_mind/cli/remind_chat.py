@@ -34,10 +34,13 @@ class ReminChatSession(ChatSession):
         state = state or {}
         configurable = configurable or {}
 
+        collection_name = self.config.get('collection_name')
+        vector_store = self.vector_store_factory(collection_name=collection_name)
+
         final_state = {'question': user_input} | state
         final_configurable = {
                                  'llm': self.llm,
-                                 'vectorstore': self.vectorstore,
+                                 'vectorstore': vector_store,
                                  'device': self.device,
                                  # KTODO handle n_top_result, temperature, etc.
                              } | configurable
@@ -45,6 +48,7 @@ class ReminChatSession(ChatSession):
             final_state,
             config={'configurable': final_configurable}
         )
+        vector_store.client.close()
         return response
 
     def print_response(self, response: dict) -> None:
@@ -83,7 +87,7 @@ def main():
     ]
     cs = ReminChatSession(available_models=model_options, default_config=DEFAULT_CONFIG,
                           config_path=cpaths.CONFIG_PATH,
-                          vectorstore=components.get_vector_store())
+                          vector_store_factory=components.get_vector_store)
     chat_loop = ChatPromptLoop(cs, commands)
     chat_loop.initialize()
     chat_loop.run()
