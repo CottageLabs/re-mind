@@ -85,12 +85,12 @@ def cal_score_matrix(queries: list[str], docs: list[Document], ranker: QARanker)
     """Calculate ranking scores for all query-document pairs and return as numpy array.
 
     Args:
-        queries: List of query strings
-        docs: List of Document objects
+        queries: [Q] List of query strings
+        docs: [N] List of Document objects
         ranker: QARanker instance to compute scores
 
     Returns:
-        Numpy array with queries as rows, documents as columns, and scores as values
+        [Q x N] Numpy array with queries as rows, documents as columns, and scores as values
     """
 
     assert len(queries) > 0, "No queries provided"
@@ -141,6 +141,9 @@ def aggregate_scores(
     """
     Implements: OR gate, then rank by TOP-k + small OR + small coverage bonus.
     Returns a list of (doc_id, final_score, components) sorted desc by score.
+
+    Args:
+        scores: [Q x N] numpy array of normalized scores (z-norm per query row-wise)
     """
 
     Z = scores  # Q x N, normalized per query
