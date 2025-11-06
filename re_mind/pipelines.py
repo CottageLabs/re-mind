@@ -10,6 +10,7 @@ from langchain_core.runnables import RunnablePassthrough, RunnableConfig
 from langchain_core.tools import tool
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph, MessagesState
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from re_mind import components, lc_prompts, retrievers
@@ -18,6 +19,7 @@ from re_mind.lc_prompts import DEFAULT_RAG_INSTRUCTION
 
 def create_basic_qa(llm, n_top_result=8):
     warnings.warn(f'demo only, no longer used in main pipelines', DeprecationWarning)
+
     def format_docs(documents):
         return "\n\n".join(
             f"[{d.metadata.get('source', '?')}] {d.page_content}" for d in documents
@@ -230,12 +232,9 @@ class RagState(TypedDict):
 
 
 def build_rag_app(
-        llm: BaseChatModel,
         *,
         n_top_result: int = 8,
         cite_metadata_keys: Tuple[str, ...] = ("source", "page"),
-        instruction: str = DEFAULT_RAG_INSTRUCTION,
-        vector_store: Any = None,
 ):
     """
     Build a deterministic RAG graph that: question -> quick_retrieve -> synthesize.
@@ -245,7 +244,6 @@ def build_rag_app(
         llm: Any tool-less chat model that supports .invoke(prompt).content.
         n_top_result: Number of top documents to retrieve via MMR.
         cite_metadata_keys: Metadata keys to surface in the 'Sources' footer.
-        instruction: Guidance added to the synthesis prompt.
 
     Returns:
         {"question": ..., "context": List[Document], "answer": str}
@@ -293,7 +291,8 @@ def build_rag_app(
         else:
             context_text = "No relevant context was retrieved."
 
-        prompt = lc_prompts.format_rag_prompt(instruction, context_text, state['question'])
+        sys_prompt = config["configurable"].get("sys_prompt", lc_prompts.DEFAULT_RAG_INSTRUCTION)
+        prompt = lc_prompts.format_rag_prompt(sys_prompt, context_text, state['question'])
 
         llm_instance = config["configurable"]["llm"]
         ai_msg = llm_instance.invoke(prompt)
@@ -330,16 +329,6 @@ def build_rag_app(
 
     g.add_edge("synthesize", END)
 
-    app = g.compile()
-
-    # Set default config for llm, device, and vectorstore
-    configurable = {
-        "llm": llm,
-        "device": "cpu",
-    }
-    if vector_store is not None:
-        configurable["vectorstore"] = vector_store
-
-    app = app.with_config({"configurable": configurable})
+    app: CompiledStateGraph = g.compile()
 
     return app

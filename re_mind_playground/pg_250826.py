@@ -429,18 +429,16 @@ def main12__try_rqg_graph():
         model_id="google/gemma-3-1b-it",
         temperature=0.4,
     )
-    # llm = create_openai_model()
-    app = build_rag_app(
-        llm=llm,
-        n_top_result=n_top_result,
-    )
-    # question = "Tell me about machine learning"
+    vectorstore = components.get_vector_store()
+
+    app = build_rag_app(n_top_result=n_top_result)
+
     question = "Write a report that about reinforcement learning"
-    # question = 'hi'
-    resp = app.invoke({
-        "question": question,
-        'query_model': 'complex',
-    })
+    resp = app.invoke(
+        {"question": question, 'query_model': 'complex'},
+        config={'configurable': {'llm': llm, 'vectorstore': vectorstore, 'device': device}}
+    )
+    vectorstore.client.close()
     print_result(resp, show_ref=True)
     app.get_graph().print_ascii()
 
