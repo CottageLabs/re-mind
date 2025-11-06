@@ -6,7 +6,7 @@ from llmchat.commands import ModelsCommand, ResetConfigCommand
 from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
 from re_mind import cpaths, components, constants
 from re_mind.cli.chat_session_utils import OUTPUT_MODE_SIMPLE, print_response
-from re_mind.cli.commands import SearchCommand
+from re_mind.cli.commands import SearchCommand, SummaryCommand
 from re_mind.commands.configs_command import ConfigsExtCommand
 
 # KTODO support librarian mode (list, add, remove documents)
@@ -26,7 +26,7 @@ class ReminChatSession(ChatSession):
     def build_rag_chain(self) -> 'CompiledStateGraph':
         from re_mind import pipelines
         n_top_result = self.config.get('n_top_result', 8)
-        return pipelines.build_rag_app(self.llm, n_top_result=n_top_result)
+        return pipelines.build_rag_app(n_top_result=n_top_result)
 
     def chat(self, user_input,
              state: dict = None,
@@ -82,6 +82,7 @@ def main():
     commands = [
         ConfigsExtCommand(),
         SearchCommand(),
+        SummaryCommand(),
         ModelsCommand(),
         ResetConfigCommand(),
     ]

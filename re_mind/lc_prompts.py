@@ -48,6 +48,12 @@ DEFAULT_RAG_INSTRUCTION = (
     "Cite sources using [#] indices that map to the context list."
 )
 
+QUERY_CONTEXT_SUMMARY_PROMPT = (
+    "Analyze the user's query and provide a concise summary of what information is being "
+    "requested. Identify the key concepts, topics, and intent behind the query. This will "
+    "help in retrieving the most relevant context from the knowledge base."
+)
+
 
 def format_rag_prompt(instruction: str, context_text: str, question: str) -> str:
     return (
