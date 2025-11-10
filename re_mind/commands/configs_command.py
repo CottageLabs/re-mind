@@ -33,7 +33,13 @@ class ConfigsExtCommand(ChatCommand):
                 else:
                     if key not in cs.config:
                         cs.print(f"[red]Unknown configuration key: {key}[/red]")
-                    cs.config[key] = type(cs.config.get(key, value))(value)
+
+                    # KTODO maybe use some schema class to type convert
+                    try:
+                        cs.config[key] = type(cs.config.get(key, value))(value)
+                    except ValueError:
+                        cs.print(f"[red] convert value to type {type(cs.config.get(key))} failed, use string instead[/red]")
+                        cs.config[key] = value
                     cs.save_config()
 
         else:
