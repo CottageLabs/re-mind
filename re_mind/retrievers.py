@@ -3,6 +3,7 @@ from typing import List
 
 import numpy as np
 from langchain_core.documents import Document
+from qdrant_client.http.models import Filter, FieldCondition, MatchAny
 
 from re_mind import llm_tasks
 from re_mind.llm_tasks import retrieve_and_deduplicate_docs
@@ -16,6 +17,55 @@ log = logging.getLogger(__name__)
 RANKER_SCORE_KEY = "ranker_score"
 
 
+def build_qdrant_filter(attached_items: list[str] | None) -> Filter | None:
+    """
+    Build Qdrant filter for attached_items matching.
+    Uses OR logic (should=[...]) to match ANY of these conditions:
+    - metadata.source in attached_items
+    - metadata.source_root in attached_items
+    - metadata.hash_id in attached_items
+
+    Returns None if attached_items is empty or None.
+    """
+    if not attached_items:
+        return None
+
+    conditions = [
+        FieldCondition(
+            key="metadata.source",
+            match=MatchAny(any=attached_items)
+        ),
+        FieldCondition(
+            key="metadata.source_root",
+            match=MatchAny(any=attached_items)
+        ),
+        FieldCondition(
+            key="metadata.hash_id",
+            match=MatchAny(any=attached_items)
+        ),
+    ]
+
+    return Filter(should=conditions)
+
+
+def resolve_search_kwargs(k: int, attached_items: list[str] | None = None) -> dict:
+    """
+    Build search kwargs dict with Qdrant filter if attached_items is provided.
+
+    Args:
+        k: Number of results to retrieve
+        attached_items: Optional list of items to filter by
+
+    Returns:
+        Dict with 'k' and optionally 'filter' keys
+    """
+    search_kwargs = {"k": k}
+    qdrant_filter = build_qdrant_filter(attached_items)
+    if qdrant_filter:
+        search_kwargs["filter"] = qdrant_filter
+    return search_kwargs
+
+
 def resolve_n_top(n_top_result: int | str, default: int = 10) -> int:
     if n_top_result == 'auto':
         return 200
@@ -26,9 +76,10 @@ def resolve_n_top(n_top_result: int | str, default: int = 10) -> int:
         return default
 
 
-def quick_retrieve(question: str, vectorstore, n_top_result: int | str = 8) -> List[Document]:
+def quick_retrieve(question: str, vectorstore, n_top_result: int | str = 8, attached_items: list[str] | None = None) -> List[Document]:
     n_top = resolve_n_top(n_top_result, default=8)
-    docs_with_scores = vectorstore.similarity_search_with_score(question, k=n_top)
+    search_kwargs = resolve_search_kwargs(n_top, attached_items)
+    docs_with_scores = vectorstore.similarity_search_with_score(question, **search_kwargs)
 
     # Add scores to metadata
     result_docs = []
@@ -42,13 +93,16 @@ def quick_retrieve(question: str, vectorstore, n_top_result: int | str = 8) -> L
     return result_docs
 
 
-def rerank_retrieve(question: str, vectorstore, n_top_result: int | str = 8, device: str | None = None) -> List[Document]:
+def rerank_retrieve(question: str, vectorstore, n_top_result: int | str = 8, device: str | None = None, attached_items: list[str] | None = None) -> List[Document]:
     n_top = resolve_n_top(n_top_result, default=8)
+    search_kwargs = resolve_search_kwargs(n_top + 20, attached_items)
+
     rerank_retriever = vectorstore.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": n_top + 20}
+        search_kwargs=search_kwargs
     )
     docs = rerank_retriever.invoke(question)
+
     ranker = BGEQARanker(device=device)
     result_docs = rerank_with_qa_ranker(question, docs, ranker, top_m=n_top)
 
@@ -58,12 +112,13 @@ def rerank_retrieve(question: str, vectorstore, n_top_result: int | str = 8, dev
     return result_docs
 
 
-def complex_retrieve(question: str, vectorstore, llm, n_top_result: int | str = 'auto', device: str | None = None) -> tuple[List[Document], List[str]]:
+def complex_retrieve(question: str, vectorstore, llm, n_top_result: int | str = 'auto', device: str | None = None, attached_items: list[str] | None = None) -> tuple[List[Document], List[str]]:
     n_top = resolve_n_top(n_top_result, default=10)
+    search_kwargs = resolve_search_kwargs(n_top + 20, attached_items)
 
     multi_query_retriever = vectorstore.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": n_top + 20}
+        search_kwargs=search_kwargs
     )
 
     extracted_queries = llm_tasks.extract_queries_from_input(llm, question)
@@ -74,6 +129,7 @@ def complex_retrieve(question: str, vectorstore, llm, n_top_result: int | str = 
     ranker = BGEQARanker(device=device)
 
     docs = list(retrieve_and_deduplicate_docs(extracted_queries, multi_query_retriever))
+
     # KTODO handle empty docs
     scores = rerankers.cal_score_matrix(extracted_queries, docs, ranker=ranker)
     top_docs = rerankers.aggregate_scores(scores, docs, k_final=n_top)
