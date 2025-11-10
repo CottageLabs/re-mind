@@ -15,21 +15,6 @@ OUTPUT_MODE_DETAIL = 'detail'
 OUTPUT_MODE_DEBUG = 'debug'
 
 
-def get_prompt_message(cs: 'ChatSession') -> str:
-    from llmchat.components.model_options import HuggingFaceModelOption
-
-    model_name = cs.config.get('model_option_name', 'unknown')
-    output_mode = cs.config.get('output_mode', OUTPUT_MODE_SIMPLE)
-
-    if isinstance(cs.model_option, HuggingFaceModelOption):
-        device_display = ''
-        if device:= cs.config.get('device', None):
-            device_display = ' ({})'.format(device)
-        return "[{model}{device}][{mode}]>  ".format(model=model_name, device=device_display, mode=output_mode)
-
-    return "[{model}][{mode}]>  ".format(model=model_name, mode=output_mode)
-
-
 def print_response(cs: 'ChatSession', response: dict):
     output_mode = cs.config.get('output_mode', OUTPUT_MODE_SIMPLE)
     if output_mode == OUTPUT_MODE_DEBUG:
@@ -85,5 +70,13 @@ def print_search_results(cs: 'ChatSession', query: str, docs: list, extracted_qu
 
         title = f"{i}. {source}" + (f" (page {page})" if page else "") + f" (Score: {score:.2f})"
         cs.print(Markdown(f"## {title}"))
-        cs.print(Panel(content, expand=True))
 
+        combined_content = content
+        if doc.metadata:
+            metadata_lines = []
+            for key, value in doc.metadata.items():
+                metadata_lines.append(f"- {key}: {value}")
+            metadata_text = "\n\n[dim]" + "\n".join(metadata_lines) + "[/dim]"
+            combined_content = content + metadata_text
+
+        cs.print(Panel(combined_content, expand=True))
