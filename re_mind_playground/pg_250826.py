@@ -9,12 +9,11 @@ from rich.markdown import Markdown
 from rich.rule import Rule
 
 from re_mind import components, pipelines
-from librarian.db.qdrant import get_client, utils as llm_utils
+from librarian.db.qdrant import get_client
 from llmchat.language_models import create_llm_huggingface, create_openai_model
 from re_mind.llm_tasks import extract_queries_from_input, retrieve_and_deduplicate_docs
 from re_mind.pipelines import build_rag_app
 from re_mind.rankers import rerankers
-from librarian import save_pdf_to_vectorstore
 from re_mind.utils.raq_utils import print_result
 
 
@@ -524,18 +523,19 @@ def main16():
     """Test complex_retrieve function."""
     from re_mind import retrievers
 
-    device = 'cpu'
-    llm_utils.set_global_device(device)
+    device = 'cuda'
+    # llm_utils.set_global_device(device)
 
     # Choose your LLM
     # llm = create_llm_huggingface(device=device, model_id="google/gemma-3-1b-it", temperature=0.2)
     llm = create_openai_model()
 
-    vectorstore = components.get_vector_store()
+    vectorstore = components.get_vector_store(collection_name='trading')
 
     test_questions = [
-        "What are the main concepts in reinforcement learning?",
-        "Explain neural network architectures",
+        # "What are the main concepts in reinforcement learning?",
+        # "Explain neural network architectures",
+        "What is stock trading?",
     ]
 
     console = Console()
@@ -565,6 +565,39 @@ def main16():
 
         console.print("\n" + "="*80 + "\n")
 
+
+def main17__test_quick_retrieve():
+    """Test quick_retrieve function."""
+    from re_mind import retrievers
+
+    vectorstore = components.get_vector_store(collection_name='trading')
+
+    test_questions = [
+        "What is stock trading?",
+        "Explain trading strategies",
+    ]
+
+    console = Console()
+
+    for question in test_questions:
+        console.print(f"\n[bold blue]Question:[/bold blue] {question}")
+        console.print(Rule(style="dim"))
+
+        result_docs = retrievers.quick_retrieve(
+            question=question,
+            vectorstore=vectorstore,
+            n_top_result=8
+        )
+
+        console.print(f"[bold yellow]Retrieved {len(result_docs)} documents:[/bold yellow]")
+        for i, doc in enumerate(result_docs, 1):
+            console.print(f"\n[bold]{i}.[/bold]")
+            console.print(f"{doc.page_content[:300]}...")
+            console.print(f"[dim]Source: {doc.metadata.get('source', 'Unknown')} | Page: {doc.metadata.get('page', 'N/A')}[/dim]")
+
+        console.print("\n" + "="*80 + "\n")
+
+
 if __name__ == "__main__":
     # main7__load_pdf()
     # main5__test_rqg_qa()
@@ -576,4 +609,5 @@ if __name__ == "__main__":
     # main12__try_rqg_graph()
     # main15()
     # main14__test_query_extraction_prompt()
-    main16()
+    # main16()
+    main17__test_quick_retrieve()
