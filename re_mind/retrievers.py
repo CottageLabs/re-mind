@@ -3,7 +3,7 @@ from typing import List
 
 import numpy as np
 from langchain_core.documents import Document
-from qdrant_client.http.models import Filter, FieldCondition, MatchAny
+from qdrant_client.http.models import Filter, FieldCondition, MatchText
 
 from re_mind import llm_tasks
 from re_mind.llm_tasks import retrieve_and_deduplicate_docs
@@ -21,29 +21,20 @@ def build_qdrant_filter(attached_items: list[str] | None) -> Filter | None:
     """
     Build Qdrant filter for attached_items matching.
     Uses OR logic (should=[...]) to match ANY of these conditions:
-    - metadata.source in attached_items
-    - metadata.source_root in attached_items
-    - metadata.hash_id in attached_items
+    - metadata.source matching any item
+    - metadata.source_root matching any item
+    - metadata.hash_id matching any item
 
     Returns None if attached_items is empty or None.
     """
     if not attached_items:
         return None
 
-    conditions = [
-        FieldCondition(
-            key="metadata.source",
-            match=MatchAny(any=attached_items)
-        ),
-        FieldCondition(
-            key="metadata.source_root",
-            match=MatchAny(any=attached_items)
-        ),
-        FieldCondition(
-            key="metadata.hash_id",
-            match=MatchAny(any=attached_items)
-        ),
-    ]
+    conditions = []
+    for item in attached_items:
+        conditions.append(FieldCondition(key="metadata.source", match=MatchText(text=item)))
+        conditions.append(FieldCondition(key="metadata.source_root", match=MatchText(text=item)))
+        conditions.append(FieldCondition(key="metadata.hash_id", match=MatchText(text=item)))
 
     return Filter(should=conditions)
 
