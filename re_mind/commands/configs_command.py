@@ -55,6 +55,16 @@ class ConfigsExtCommand(ChatCommand):
         table.add_row("Collection name", cs.config.get('collection_name', 'N/A'))
         cs.print(table)
 
+        cs.print()
+        attached_table = Table(title="Attached Items", show_header=False, box=None)
+        attached_table.add_column(style="cyan", no_wrap=True)
+        if cs.attached_items:
+            for item in cs.attached_items:
+                attached_table.add_row(item)
+        else:
+            attached_table.add_row("[dim]No items attached[/dim]")
+        cs.print(attached_table)
+
         cs.print(Markdown("## Configuration Commands"))
         cs.print()
         config_table = Table(title="Current Configuration", show_header=False, box=None)

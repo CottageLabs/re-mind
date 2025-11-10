@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 
 from llmchat import ChatPromptLoop
@@ -6,7 +7,7 @@ from llmchat.commands import ModelsCommand, ResetConfigCommand
 from llmchat.components.model_options import HuggingFaceModelOption, OpenAIModelOption
 from re_mind import cpaths, components, constants
 from re_mind.cli.chat_session_utils import OUTPUT_MODE_SIMPLE, print_response
-from re_mind.cli.commands import SearchCommand, SummaryCommand
+from re_mind.cli.commands import AttachCommand, SearchCommand, SummaryCommand
 from re_mind.commands.configs_command import ConfigsExtCommand
 
 # KTODO support librarian mode (list, add, remove documents)
@@ -22,7 +23,11 @@ from re_mind.commands.configs_command import ConfigsExtCommand
 log = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass
 class ReminChatSession(ChatSession):
+    attached_items: list[str] = dataclasses.field(default_factory=list)
+    """ List for sources that will be used to filter documents in vector store search. """
+
     def build_rag_chain(self) -> 'CompiledStateGraph':
         from re_mind import pipelines
         n_top_result = self.config.get('n_top_result', 8)
@@ -37,7 +42,10 @@ class ReminChatSession(ChatSession):
         collection_name = self.config.get('collection_name')
         vector_store = self.vector_store_factory(collection_name=collection_name)
 
-        final_state = {'question': user_input} | state
+        final_state = {
+            'question': user_input,
+            'attached_items': self.attached_items if self.attached_items else None
+        } | state
         final_configurable = {
                                  'llm': self.llm,
                                  'vectorstore': vector_store,
@@ -53,6 +61,18 @@ class ReminChatSession(ChatSession):
 
     def print_response(self, response: dict) -> None:
         print_response(self, response)
+
+    def get_prompt_message(self) -> str:
+        prompt_message = super().get_prompt_message()
+        files = self.attached_items
+        files = [f"  - {f}" for f in files]
+        if files:
+            if len(files) > 3:
+                files_str = '\n'.join(files[:3]) + f'\n  ... and {len(files) - 3} more files.'
+            else:
+                files_str = '\n'.join(files)
+            prompt_message = 'Attached files:\n' + files_str + '\n' + prompt_message
+        return prompt_message
 
 
 def main():
@@ -80,6 +100,7 @@ def main():
         OpenAIModelOption(name='gpt-5-nano', model='gpt-5-nano-2025-08-07'),
     ]
     commands = [
+        AttachCommand(),
         ConfigsExtCommand(),
         SearchCommand(),
         SummaryCommand(),

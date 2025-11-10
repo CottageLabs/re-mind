@@ -228,6 +228,7 @@ class RagState(TypedDict):
     answer: str
     query_model: Literal['quick', 'rerank', 'complex']  # KTODO rename query_mode
     extracted_queries: List[str] | None
+    attached_items: List[str] | None
     # KTODO add user's system instructions
 
 
@@ -261,24 +262,27 @@ def build_rag_app(
 
     def quick_retrieve(state: RagState, config: RunnableConfig):
         vectorstore = config["configurable"]["vectorstore"]
+        attached_items = state.get("attached_items")
         docs: List[Document] = retrievers.quick_retrieve(
-            state["question"], vectorstore, n_top_result
+            state["question"], vectorstore, n_top_result, attached_items=attached_items
         )
         return {"context": docs}
 
     def rerank_retrieve(state: RagState, config: RunnableConfig):
         vectorstore = config["configurable"]["vectorstore"]
         device = config["configurable"].get("device")
-        docs = retrievers.rerank_retrieve(state["question"], vectorstore, n_top_result, device=device)
+        attached_items = state.get("attached_items")
+        docs = retrievers.rerank_retrieve(state["question"], vectorstore, n_top_result, device=device, attached_items=attached_items)
         return {"context": docs}
 
     def complex_retrieve(state: RagState, config: RunnableConfig):
         vectorstore = config["configurable"]["vectorstore"]
         llm_instance = config["configurable"]["llm"]
         device = config["configurable"].get('device')
+        attached_items = state.get("attached_items")
 
         docs, extracted_queries = retrievers.complex_retrieve(state["question"], vectorstore, llm_instance,
-                                                              n_top_result, device=device)
+                                                              n_top_result, device=device, attached_items=attached_items)
         return {"context": docs, "extracted_queries": extracted_queries}
 
     def synthesize(state: RagState, config: RunnableConfig):

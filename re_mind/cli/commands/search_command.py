@@ -20,7 +20,12 @@ class SearchCommand(ChatCommand):
         if vectorstore is None:
             cs.print("[red]Vector store is not configured. Update your vector store settings before running /search.[/red]")
             return
-        docs, extracted_queries = retrievers.complex_retrieve(query, vectorstore, cs.llm, cs.config['n_top_result'],
-                                                              device=cs.config.get('device'))
+
+        attached_items = getattr(cs, 'attached_items', None)
+        docs, extracted_queries = retrievers.complex_retrieve(
+            query, vectorstore, cs.llm, cs.config['n_top_result'],
+            device=cs.config.get('device'),
+            attached_items=attached_items
+        )
         vectorstore.client.close()
         print_search_results(cs, query, docs, extracted_queries)
