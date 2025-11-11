@@ -430,12 +430,12 @@ def main12__try_rqg_graph():
     )
     vectorstore = components.get_vector_store()
 
-    app = build_rag_app(n_top_result=n_top_result)
+    app = build_rag_app()
 
     question = "Write a report that about reinforcement learning"
     resp = app.invoke(
         {"question": question, 'query_model': 'complex'},
-        config={'configurable': {'llm': llm, 'vectorstore': vectorstore, 'device': device}}
+        config={'configurable': {'llm': llm, 'vectorstore': vectorstore, 'device': device, 'n_top_result': n_top_result}}
     )
     vectorstore.client.close()
     print_result(resp, show_ref=True)

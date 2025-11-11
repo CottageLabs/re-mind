@@ -30,8 +30,7 @@ class ReminChatSession(ChatSession):
 
     def build_rag_chain(self) -> 'CompiledStateGraph':
         from re_mind import rag_graphs
-        n_top_result = self.config.get('n_top_result', 8)
-        return rag_graphs.build_rag_app(n_top_result=n_top_result)
+        return rag_graphs.build_rag_app()
 
     def chat(self, user_input,
              state: dict = None,
@@ -50,7 +49,7 @@ class ReminChatSession(ChatSession):
                                  'llm': self.llm,
                                  'vectorstore': vector_store,
                                  'device': self.device,
-                                 # KTODO handle n_top_result, temperature, etc.
+                                 'n_top_result': self.config.get('n_top_result', 'auto'),
                              } | configurable
         response = self.rag_chain.invoke(
             final_state,
