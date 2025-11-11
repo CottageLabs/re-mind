@@ -21,24 +21,16 @@ def print_response(cs: 'ChatSession', response: dict):
         # Debug mode: show full response
         cs.print(response)
 
-        extracted_queries = response.get("extracted_queries")
-        context = response.get("context", [])
-        if context:
-            cs.print(Markdown("# Source Documents"))
-            for i, doc in enumerate(context):
-                cs.print(f"    [{i + 1}] {doc.metadata}")
-                cs.print(Panel(doc.page_content, title=f"Document {i + 1}", expand=True))
-
-        if extracted_queries:
-            cs.print(Markdown("# Extracted Queries"))
-            for i, query in enumerate(extracted_queries, 1):
-                cs.print(f"  {i}. {query}")
-            cs.print()
-
+        print_search_results(cs,
+                             response.get('query', ''),
+                             response.get('context', []),
+                             response.get("extracted_queries")
+                             )
 
     elif output_mode == OUTPUT_MODE_DETAIL:
         # Detailed mode: show answer and search results
-        print_search_results(cs, response.get('query', ''), response.get('context', []),
+        print_search_results(cs, response.get('query', ''),
+                             response.get('context', []),
                              response.get('extracted_queries', []))
 
     if output_mode in (OUTPUT_MODE_DEBUG, OUTPUT_MODE_DETAIL):
@@ -50,7 +42,13 @@ def print_response(cs: 'ChatSession', response: dict):
     cs.print(output)
 
 
-def print_search_results(cs: 'ChatSession', query: str, docs: list, extracted_queries: list):
+def print_search_results(
+        cs: 'ChatSession',
+        query: str,
+        docs: list,
+        extracted_queries: list = None,
+        max_content_length: int = None
+):
     cs.print(Markdown("## Search Results"))
     cs.print(Markdown(f"**Query:** {query}"))
     cs.print()
@@ -63,7 +61,10 @@ def print_search_results(cs: 'ChatSession', query: str, docs: list, extracted_qu
 
     cs.print(Markdown(f"### Documents ({len(docs)} found)"))
     for i, doc in enumerate(docs, 1):
-        content = doc.page_content[:400] + "..." if len(doc.page_content) > 400 else doc.page_content
+        if max_content_length and len(doc.page_content) > max_content_length:
+            content = doc.page_content[:max_content_length] + "..."
+        else:
+            content = doc.page_content
         source = doc.metadata.get('source', 'Unknown')
         page = doc.metadata.get('page', '')
         score = doc.metadata.get('ranker_score', 0)
