@@ -8,11 +8,11 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.rule import Rule
 
-from re_mind import components, pipelines
+from re_mind import components, rag_graphs
 from librarian.db.qdrant import get_client
 from llmchat.language_models import create_llm_huggingface, create_openai_model
 from re_mind.llm_tasks import extract_queries_from_input, retrieve_and_deduplicate_docs
-from re_mind.pipelines import build_rag_app
+from re_mind.rag_graphs import build_rag_app
 from re_mind.rankers import rerankers
 from re_mind.utils.raq_utils import print_result
 
@@ -190,7 +190,7 @@ def main5__test_rqg_qa():
         temperature=1.2,
     )
 
-    rag_chain = pipelines.create_basic_qa(llm)
+    rag_chain = rag_graphs.create_basic_qa(llm)
 
     # questions = [
     #     "What is Qdrant and what is it used for?",
@@ -304,7 +304,7 @@ def main8__test_rqg_qa():
         temperature=1.2,
     )
 
-    rag_chain = pipelines.create_basic_qa(llm)
+    rag_chain = rag_graphs.create_basic_qa(llm)
 
     # questions = [
     #     "What is Qdrant and what is it used for?",
@@ -335,8 +335,8 @@ def main9__try_demo_graph():
     # llm = create_llama3(device=device)
     # llm = create_vllm_model()
     # llm = create_openai_model()
-    app = pipelines.create_demo_graph(llm)
-    # app = pipelines.create_demo_graph2(llm)
+    app = rag_graphs.create_demo_graph(llm)
+    # app = rag_graphs.create_demo_graph2(llm)
 
     # Run
     # out = app.invoke({"messages": [HumanMessage("Check AAPL and then advise.")]})

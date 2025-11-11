@@ -29,9 +29,9 @@ class ReminChatSession(ChatSession):
     """ List for sources that will be used to filter documents in vector store search. """
 
     def build_rag_chain(self) -> 'CompiledStateGraph':
-        from re_mind import pipelines
+        from re_mind import rag_graphs
         n_top_result = self.config.get('n_top_result', 8)
-        return pipelines.build_rag_app(n_top_result=n_top_result)
+        return rag_graphs.build_rag_app(n_top_result=n_top_result)
 
     def chat(self, user_input,
              state: dict = None,

@@ -8,7 +8,7 @@ from rich.panel import Panel
 
 if TYPE_CHECKING:
     from langchain_core.documents import Document
-    from ..pipelines import RagState
+    from ..rag_graphs import RagState
 
 
 def print_ref(context: Sequence["Document"], console: Optional[Console] = None) -> None:
