@@ -7,6 +7,7 @@ from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from re_mind import llm_tasks
+from re_mind.rag_graphs.json_graph import build_json_graph
 
 
 class ComplexRetrieveState(TypedDict):
@@ -25,6 +26,27 @@ def extract_queries(state: ComplexRetrieveState, config: RunnableConfig):
     return {"extracted_queries_str": content}
 
 
+class ParseQueriesNode:
+    def __init__(self):
+        self.json_graph = build_json_graph()
+
+    def __call__(self, state: ComplexRetrieveState, config: RunnableConfig):
+        llm_instance = config["configurable"]["llm"]
+
+        result = self.json_graph.invoke(
+            {
+                "user_input": state["extracted_queries_str"],
+                "retry_count": 0
+            },
+            config={"configurable": {"llm": llm_instance}}
+        )
+
+        # If json_graph failed after retry, use parsed_json or fallback to wrapping json_output in a list
+        extracted_queries = result.get("parsed_json") or [result.get("json_output")]
+
+        return {"extracted_queries": extracted_queries}
+
+
 def build_complex_retrieve_graph():
     """
     Build a graph that extracts queries from a given question.
@@ -39,10 +61,11 @@ def build_complex_retrieve_graph():
     """
     g = StateGraph(ComplexRetrieveState)
     g.add_node("extract_queries", extract_queries)
-    # KTODO create a node to use build_json_graph
+    g.add_node("parse_queries", ParseQueriesNode())
 
     g.add_edge(START, "extract_queries")
-    g.add_edge("extract_queries", END)
+    g.add_edge("extract_queries", "parse_queries")
+    g.add_edge("parse_queries", END)
 
     app: CompiledStateGraph = g.compile()
 
@@ -67,8 +90,12 @@ def main():
         config={"configurable": {"llm": llm}}
     )
 
-    print("\nExtracted queries:")
+    print("\nExtracted queries (raw):")
     print(result.get("extracted_queries_str", ""))
+
+    print("\nParsed queries:")
+    for i, query in enumerate(result.get("extracted_queries", []), 1):
+        print(f"{i}. {query}")
 
     print("\nDemo completed!")
 

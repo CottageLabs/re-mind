@@ -14,15 +14,15 @@ from re_mind import lc_prompts
 class JsonState(TypedDict):
     user_input: str
     json_output: str | None
-    parsed_json: dict | None
+    parsed_json: dict | list | None
     error: str | None
     retry_count: int
-    max_retries: int
 
 
 class JsonGraphConfigurable(TypedDict):
     llm: BaseChatModel
     sys_prompt: NotRequired[str]
+    max_retries: NotRequired[int]
 
 
 def generate_json(state: JsonState, config: RunnableConfig):
@@ -62,11 +62,11 @@ def validate_json(state: JsonState):
         return {"error": f"JSON parse error: {str(e)}", "retry_count": state["retry_count"] + 1}
 
 
-def should_retry(state: JsonState):
+def should_retry(state: JsonState, config: RunnableConfig):
     if state.get("parsed_json") is not None:
         return "success"
 
-    max_retries = state.get("max_retries", 3)
+    max_retries = config["configurable"].get("max_retries", 3)
     if state["retry_count"] >= max_retries:
         return "failed"
 
@@ -80,7 +80,7 @@ def build_json_graph():
     The graph will attempt to generate valid JSON up to max_retries times before failing.
 
     Returns:
-        CompiledStateGraph that takes {"user_input": str, "retry_count": 0, "max_retries": 3} and returns
+        CompiledStateGraph that takes {"user_input": str, "retry_count": 0} and returns
         {"parsed_json": dict, "error": str | None}
 
     Note:
@@ -88,8 +88,6 @@ def build_json_graph():
         (see JsonGraphConfigurable):
         - llm: LLM instance to use for JSON generation
         - sys_prompt: System instruction for JSON generation (default: DEFAULT_JSON_GENERATION_INSTRUCTION)
-
-        State parameters:
         - max_retries: Maximum number of retry attempts (default: 3)
     """
     g = StateGraph(JsonState)
