@@ -103,19 +103,34 @@ def rerank_retrieve(question: str, vectorstore, n_top_result: int | str = 8, dev
     return result_docs
 
 
-def complex_retrieve(question: str, vectorstore, llm, n_top_result: int | str = 'auto', device: str | None = None, attached_items: list[str] | None = None) -> tuple[List[Document], List[str]]:
+def retrieve_by_queries(
+    extracted_queries: List[str],
+    vectorstore,
+    n_top_result: int | str='auto',
+    attached_items: list[str] | None = None,
+    device: str | None = None
+) -> List[Document]:
+    """
+    Retrieve documents using multiple queries, rerank them, and optionally auto-select top N.
+
+    Args:
+        extracted_queries: List of queries to retrieve documents for
+        vectorstore: Vector store to create retriever from
+        n_top_result: If 'auto', automatically select top N docs; otherwise use n_top
+        attached_items: Optional list of items to filter by
+        device: Device to use for ranker model
+
+    Returns:
+        List of documents with ranker scores in metadata
+    """
     n_top = resolve_n_top(n_top_result, default=10)
     search_kwargs = resolve_search_kwargs(n_top + 20, attached_items)
+    extracted_queries = list(set(extracted_queries))
 
     multi_query_retriever = vectorstore.as_retriever(
         search_type="similarity",
         search_kwargs=search_kwargs
     )
-
-    extracted_queries = llm_tasks.extract_queries_from_input(llm, question)
-    if not extracted_queries:
-        log.warning("No queries extracted from input.")
-        extracted_queries = [question]
 
     ranker = BGEQARanker(device=device)
 
@@ -132,6 +147,20 @@ def complex_retrieve(question: str, vectorstore, llm, n_top_result: int | str = 
 
     if n_top_result == 'auto':
         result_docs = auto_select_top_n_doc(result_docs)
+
+    return result_docs
+
+
+def complex_retrieve(question: str, vectorstore, llm,
+                     n_top_result: int | str = 'auto',
+                     device: str | None = None,
+                     attached_items: list[str] | None = None) -> tuple[List[Document], List[str]]:
+    extracted_queries = llm_tasks.extract_queries_from_input(llm, question)
+    if not extracted_queries:
+        log.warning("No queries extracted from input.")
+        extracted_queries = [question]
+
+    result_docs = retrieve_by_queries(extracted_queries, vectorstore, n_top_result, attached_items, device)
 
     return result_docs, extracted_queries
 

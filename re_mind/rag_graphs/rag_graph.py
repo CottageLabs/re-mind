@@ -1,3 +1,4 @@
+import warnings
 from typing import TypedDict, List, Literal, NotRequired
 
 from langchain_core.documents import Document
@@ -9,6 +10,7 @@ from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from re_mind import lc_prompts, retrievers
+from re_mind.rag_graphs.complex_retrieve_graph import build_complex_retrieve_graph
 
 
 class RagState(TypedDict):
@@ -62,6 +64,9 @@ def rerank_retrieve(state: RagState, config: RunnableConfig):
 
 
 def complex_retrieve(state: RagState, config: RunnableConfig):
+    # TOBEREMOVE
+    warnings.warn('The complex_retrieve function is deprecated.'
+                  ' Please use the ComplexRetrieveNode class instead.', DeprecationWarning)
     vectorstore = config["configurable"]["vectorstore"]
     n_top_result = config["configurable"].get("n_top_result", "auto")
     llm_instance = config["configurable"]["llm"]
@@ -72,6 +77,32 @@ def complex_retrieve(state: RagState, config: RunnableConfig):
         state["question"], vectorstore, llm_instance, n_top_result, device=device, attached_items=attached_items
     )
     return {"context": docs, "extracted_queries": extracted_queries}
+
+
+class ComplexRetrieveNode:
+    def __init__(self):
+        self.complex_retrieve_graph = build_complex_retrieve_graph()
+
+    def __call__(self, state: RagState, config: RunnableConfig):
+        configurable = config["configurable"]
+
+        result = self.complex_retrieve_graph.invoke(
+            {"question": state["question"]},
+            config={
+                "configurable": {
+                    "llm": configurable["llm"],
+                    "vectorstore": configurable["vectorstore"],
+                    "n_top_result": configurable.get("n_top_result", "auto"),
+                    "attached_items": state.get("attached_items"),
+                    "device": configurable.get("device")
+                }
+            }
+        )
+
+        return {
+            "context": result["documents"],
+            "extracted_queries": result["extracted_queries"]
+        }
 
 
 def synthesize(state: RagState, config: RunnableConfig):
@@ -154,7 +185,7 @@ def build_rag_app():
     g = StateGraph(RagState)
     g.add_node("quick_retrieve", quick_retrieve)
     g.add_node("rerank_retrieve", rerank_retrieve)
-    g.add_node("complex_retrieve", complex_retrieve)
+    g.add_node("complex_retrieve", ComplexRetrieveNode())
     g.add_node("synthesize", synthesize)
 
     # Edges

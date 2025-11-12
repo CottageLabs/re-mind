@@ -1,5 +1,5 @@
 import json
-from typing import TypedDict, NotRequired
+from typing import TypedDict, NotRequired, Literal
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -23,6 +23,7 @@ class JsonGraphConfigurable(TypedDict):
     llm: BaseChatModel
     sys_prompt: NotRequired[str]
     max_retries: NotRequired[int]
+    output_type: NotRequired[Literal['list', 'dict', 'any']]
 
 
 def generate_json(state: JsonState, config: RunnableConfig):
@@ -40,7 +41,7 @@ def generate_json(state: JsonState, config: RunnableConfig):
     return {"json_output": json_output}
 
 
-def validate_json(state: JsonState):
+def validate_json(state: JsonState, config: RunnableConfig):
     json_output = state.get("json_output", "")
 
     if not json_output:
@@ -57,6 +58,21 @@ def validate_json(state: JsonState):
             json_output = json_output[start:end].strip()
 
         parsed = json.loads(json_output)
+
+        output_type = config["configurable"].get("output_type")
+        if output_type == 'dict' and not isinstance(parsed, dict):
+            return {
+                "error": f"Expected dict but got {type(parsed).__name__}",
+                "retry_count": state["retry_count"] + 1,
+                "parsed_json": None
+            }
+        elif output_type == 'list' and not isinstance(parsed, list):
+            return {
+                "error": f"Expected list but got {type(parsed).__name__}",
+                "retry_count": state["retry_count"] + 1,
+                "parsed_json": None
+            }
+
         return {"parsed_json": parsed, "error": None}
     except json.JSONDecodeError as e:
         return {"error": f"JSON parse error: {str(e)}", "retry_count": state["retry_count"] + 1}
@@ -89,6 +105,7 @@ def build_json_graph():
         - llm: LLM instance to use for JSON generation
         - sys_prompt: System instruction for JSON generation (default: DEFAULT_JSON_GENERATION_INSTRUCTION)
         - max_retries: Maximum number of retry attempts (default: 3)
+        - output_type: Type validation - 'dict', 'list', or 'any' (default: 'any')
     """
     g = StateGraph(JsonState)
     g.add_node("generate_json", generate_json)

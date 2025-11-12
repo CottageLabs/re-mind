@@ -82,3 +82,12 @@ DEFAULT_JSON_GENERATION_INSTRUCTION = (
     "If the input is plain text (not a JSON specification), convert it to a JSON array "
     "where each non-empty line becomes a string element in the array."
 )
+
+POINTS_TO_JSON_LIST_INSTRUCTION = (
+    "Convert the given user input from bullet points or lines into a JSON list (array). "
+    "Each point or line should become a string element in the array. "
+    "Remove any bullet point markers (-, *, •, numbers, etc.) and trim whitespace. "
+    "Skip empty lines. "
+    "Return ONLY a valid JSON array without additional explanation or markdown formatting. "
+    "The output must be a JSON array/list, NOT a JSON object/dict."
+)
