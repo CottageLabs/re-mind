@@ -73,3 +73,12 @@ def get_query_extraction_prompt(user_input: str) -> str:
         "terms, concepts, or topics.\n\n"
         f"User input: {user_input}"
     )
+
+
+DEFAULT_JSON_GENERATION_INSTRUCTION = (
+    "Generate valid JSON output based on the user's request. "
+    "Ensure the output is properly formatted and follows JSON syntax rules. "
+    "Return only the JSON object without additional explanation or markdown formatting. "
+    "If the input is plain text (not a JSON specification), convert it to a JSON array "
+    "where each non-empty line becomes a string element in the array."
+)

@@ -6,16 +6,26 @@ from re_mind.lc_prompts import get_query_extraction_prompt
 from re_mind.utils import iter_utils
 
 
-def extract_queries_from_input(llm, user_input):
-    """Extract queries from user input using the query extraction prompt."""
+def get_extracted_queries_content(llm, user_input) -> str:
+    """Invoke LLM to extract queries and return raw content. Returns empty string if NO_QUERY."""
     prompt = get_query_extraction_prompt(user_input)
     result = llm.invoke(prompt)
+    content = result.content
 
-    if "<NO_QUERY>" in result.content:
+    if "<NO_QUERY>" in content:
+        return ''
+
+    return content
+
+
+def extract_queries_from_input(llm, user_input) -> list[str]:
+    """Extract queries from user input using the query extraction prompt."""
+    content = get_extracted_queries_content(llm, user_input)
+
+    if not content:
         return []
 
-    # Split content into lines and filter out empty lines
-    queries = [line.strip() for line in result.content.split('\n') if line.strip()]
+    queries = [line.strip() for line in content.split('\n') if line.strip()]
     return queries
 
 
